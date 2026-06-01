@@ -1,0 +1,64 @@
+# ──── Python ────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# ──── Node ────
+node_modules/
+.next/
+out/
+
+# ──── Environment ────
+.env
+.env.*
+!.env.example
+
+# ──── IDE ────
+.vscode/
+.idea/
+
+# ──── OS ────
+.DS_Store
+Thumbs.db
+
+# ──── Storage ────
+uploads/
+*.log
+
+# ──── Docker ────
+docker-data/
+
+# ──── n8n ────
+n8n/credentials/
+n8n_data/
+.n8n/
+
+# ──── Secrets & Keys ────
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+*credentials*.json
+*service-account*.json
+.npmrc
+
+# ──── Database ────
+*.db
+*.sqlite
+*.sqlite3
+
+# ──── Build ────
+dist/
+build/
+
+# ──── Test / Coverage ────
+coverage/
+.coverage
+htmlcov/
+
+# ──── Docker overrides ────
+docker-compose.override.yml

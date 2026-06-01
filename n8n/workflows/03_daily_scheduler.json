@@ -1,0 +1,136 @@
+{
+  "name": "03_Daily_Scheduler",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "minutes", "minutesInterval": 15 }]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Cron: Every 15 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = new Date();\nconst windowEnd = new Date(now.getTime() + 16 * 60 * 1000);\n\nconst backendUrl = \"http://fastapi:8000\";\n\nconst queryParams = new URLSearchParams({\n  status: \"scheduled\",\n  scheduled_before: windowEnd.toISOString(),\n  scheduled_after: now.toISOString()\n});\n\nconst response = await $request.get(\n  `${backendUrl}/api/publications/?${queryParams.toString()}`\n);\nconst publications = response.json();\n\nif (!publications.length) {\n  return { message: \"No publications due.\" };\n}\n\nconst items = publications.map(p => ({\n  json: {\n    publication_id: p.id,\n    title: p.title,\n    scheduled_at: p.scheduled_at,\n    ai_model: p.ai_model,\n    image_url: p.image_url,\n    targets: p.targets,\n    caption: p.caption\n  }\n}));\n\nreturn items;"
+      },
+      "id": "check-pending",
+      "name": "Check Pending Publications",
+      "type": "n8n-nodes-base.code",
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": [
+            {
+              "conditions": [
+                {
+                  "leftValue": "={{ $json.image_url }}",
+                  "rightValue": "",
+                  "operator": { "type": "string", "operation": "isNotEmpty" }
+                }
+              ],
+              "renameOutput": true,
+              "outputKey": "hasImage"
+            },
+            {
+              "conditions": [
+                {
+                  "leftValue": "={{ $json.image_url }}",
+                  "rightValue": "",
+                  "operator": { "type": "string", "operation": "isEmpty" }
+                }
+              ],
+              "renameOutput": true,
+              "outputKey": "needsImage"
+            }
+          ]
+        }
+      },
+      "id": "if-has-image",
+      "name": "Has Image?",
+      "type": "n8n-nodes-base.if",
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://n8n:5678/webhook/auto-publish",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "publication_id",
+              "value": "={{ $json.publication_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "trigger-publish-has-image",
+      "name": "Trigger Publish (Has Image)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [850, 250]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://n8n:5678/webhook/image-generation",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "publication_id",
+              "value": "={{ $json.publication_id }}"
+            },
+            {
+              "name": "prompt",
+              "value": "={{ $json.prompt || '' }}"
+            },
+            {
+              "name": "ai_model",
+              "value": "={{ $json.ai_model || 'gemini' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "trigger-generate",
+      "name": "Trigger Image Generation",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [850, 450]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $items(\"Has Image?\").map(item => ({\n  json: { processed: true, title: item.json.title || \"- unknown\" }\n}));"
+      },
+      "id": "final-summary",
+      "name": "Final Summary",
+      "type": "n8n-nodes-base.code",
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "Cron: Every 15 min": {
+      "main": [[{ "node": "Check Pending Publications", "type": "main", "index": 0 }]]
+    },
+    "Check Pending Publications": {
+      "main": [[{ "node": "Has Image?", "type": "main", "index": 0 }]]
+    },
+    "Has Image?": {
+      "main": [
+        [{ "node": "Trigger Publish (Has Image)", "type": "main", "index": 0 }],
+        [{ "node": "Trigger Image Generation", "type": "main", "index": 0 }]
+      ]
+    },
+    "Trigger Publish (Has Image)": {
+      "main": [[{ "node": "Final Summary", "type": "main", "index": 0 }]]
+    },
+    "Trigger Image Generation": {
+      "main": [[{ "node": "Final Summary", "type": "main", "index": 0 }]]
+    }
+  }
+}

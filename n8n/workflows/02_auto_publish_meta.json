@@ -1,0 +1,80 @@
+{
+  "name": "02_Auto_Publish_Meta",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "auto-publish",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook: Auto Publish",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { publication_id } = $input.first().json;\nconst backendUrl = \"http://fastapi:8000\";\n\nconst pubResponse = await $request.get(`${backendUrl}/api/publications/${publication_id}`);\nconst publication = pubResponse.json();\n\nconst accountsResponse = await $request.get(`${backendUrl}/api/social/accounts`);\nconst accounts = accountsResponse.json();\n\nreturn {\n  publication_id,\n  targets: publication.targets,\n  image_url: backendUrl + publication.image_url,\n  caption: publication.caption || \"\",\n  accounts,\n  backendUrl\n};"
+      },
+      "id": "fetch-publication",
+      "name": "Fetch Publication & Accounts",
+      "type": "n8n-nodes-base.code",
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.backendUrl }}/api/social/publish",
+        "authentication": "none",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "publication_id", "value": "={{ $json.publication_id }}" },
+            { "name": "targets", "value": "={{ $json.targets }}" },
+            { "name": "image_url", "value": "={{ $json.image_url }}" },
+            { "name": "caption", "value": "={{ $json.caption }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "call-fastapi-publish",
+      "name": "Call FastAPI: Publish to Meta",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.first().json;\n\nconst logItems = result.results.map(r => ({\n  json: {\n    publication_id: result.publication_id,\n    target: r.target,\n    success: r.success,\n    post_id: r.post_id,\n    permalink: r.permalink,\n    error: r.error || null,\n    timestamp: new Date().toISOString()\n  }\n}));\n\nreturn logItems;"
+      },
+      "id": "format-logs",
+      "name": "Format Publish Results",
+      "type": "n8n-nodes-base.code",
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: Auto Publish": {
+      "main": [[{ "node": "Fetch Publication & Accounts", "type": "main", "index": 0 }]]
+    },
+    "Fetch Publication & Accounts": {
+      "main": [[{ "node": "Call FastAPI: Publish to Meta", "type": "main", "index": 0 }]]
+    },
+    "Call FastAPI: Publish to Meta": {
+      "main": [[{ "node": "Format Publish Results", "type": "main", "index": 0 }]]
+    },
+    "Format Publish Results": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    }
+  }
+}

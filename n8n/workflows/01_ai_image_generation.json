@@ -1,0 +1,80 @@
+{
+  "name": "01_AI_Image_Generation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "image-generation",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook: Generate Image",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { prompt, ai_model } = $input.first().json;\n\nconst modelMap = {\n  gemini: \"gemini\",\n  openai_dalle: \"dall-e\",\n  openrouter_flux: \"flux\",\n  openrouter_sd: \"stable-diffusion\"\n};\n\nreturn {\n  prompt: prompt,\n  model: modelMap[ai_model] || \"gemini\",\n  backendUrl: \"http://fastapi:8000\"\n};"
+      },
+      "id": "set-model",
+      "name": "Prepare Model Config",
+      "type": "n8n-nodes-base.code",
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.backendUrl }}/api/generation/{{ $json.model }}",
+        "authentication": "none",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "={{ $json.prompt }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "call-fastapi-gen",
+      "name": "Call FastAPI: Generate",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nreturn {\n  success: true,\n  image_url: data.image_url,\n  model: data.ai_model,\n  duration_ms: data.duration_ms\n};"
+      },
+      "id": "format-response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond-to-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: Generate Image": {
+      "main": [[{ "node": "Prepare Model Config", "type": "main", "index": 0 }]]
+    },
+    "Prepare Model Config": {
+      "main": [[{ "node": "Call FastAPI: Generate", "type": "main", "index": 0 }]]
+    },
+    "Call FastAPI: Generate": {
+      "main": [[{ "node": "Format Response", "type": "main", "index": 0 }]]
+    },
+    "Format Response": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    }
+  }
+}
