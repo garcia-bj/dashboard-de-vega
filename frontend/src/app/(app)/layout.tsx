@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import { Toaster } from "sonner";
 import {
   LayoutDashboard,
   Wand2,
@@ -57,11 +59,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-surface">
+      <Toaster position="top-right" richColors closeButton />
+
       {/* ─── Sidebar ─── */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-40 flex flex-col bg-tertiary transition-all duration-300 ease-in-out ${
-          collapsed ? "w-[64px]" : "w-[260px]"
-        }`}
+      <motion.aside
+        animate={{ width: collapsed ? 64 : 260 }}
+        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+        className="fixed inset-y-0 left-0 z-40 flex flex-col bg-gradient-to-b from-tertiary to-[#0a0f1a] border-r border-white/5"
       >
         {/* Logo */}
         <div className="flex items-center h-14 px-4 border-b border-white/5 flex-shrink-0">
@@ -76,7 +80,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           ) : (
             <div className="flex items-center justify-between w-full">
               <Link href="/dashboard" className="flex items-center gap-2.5 min-w-0">
-                <Sparkles size={20} className="text-secondary flex-shrink-0" />
+                <motion.div
+                  whileHover={{ rotate: 15, scale: 1.1 }}
+                  transition={{ type: "spring", stiffness: 500 }}
+                >
+                  <Sparkles size={20} className="text-secondary flex-shrink-0" />
+                </motion.div>
                 <span className="text-lg font-bold text-white tracking-tight truncate">De Vega</span>
               </Link>
               <button
@@ -99,16 +108,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 title={collapsed ? item.label : undefined}
-                className={`flex items-center gap-3 rounded transition-all duration-150 ${
+                className={`flex items-center gap-3 rounded transition-all duration-200 relative overflow-hidden ${
                   collapsed ? "justify-center px-2 py-3" : "px-3 py-2.5"
                 } ${
                   isActive
-                    ? "bg-white/10 text-white font-semibold"
-                    : "text-surface-dim hover:text-white hover:bg-white/5 font-medium"
+                    ? "bg-white/10 text-white"
+                    : "text-surface-dim hover:text-white hover:bg-white/[0.04]"
                 }`}
               >
-                <item.icon size={20} className="flex-shrink-0" />
-                {!collapsed && <span className="text-body-md truncate">{item.label}</span>}
+                {isActive && !collapsed && (
+                  <motion.div
+                    layoutId="activeNav"
+                    className="absolute inset-0 bg-white/10"
+                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                  />
+                )}
+                <item.icon size={20} className="flex-shrink-0 relative z-10" />
+                {!collapsed && <span className="text-body-md truncate relative z-10">{item.label}</span>}
+                {isActive && (
+                  <span className="absolute right-2 w-1 h-6 rounded-full bg-secondary" />
+                )}
               </Link>
             );
           })}
@@ -119,7 +138,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {collapsed ? (
             <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}
-              className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-white font-semibold text-sm hover:ring-2 hover:ring-secondary/40 transition-all"
+              className="w-9 h-9 rounded-full bg-gradient-to-br from-secondary to-secondary-hover flex items-center justify-center text-white font-semibold text-sm hover:ring-2 hover:ring-secondary/40 transition-all"
             >
               B
             </button>
@@ -129,7 +148,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                 className="flex items-center gap-3 w-full px-2 py-1.5 rounded hover:bg-white/5 transition-colors"
               >
-                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-secondary to-secondary-hover flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">
                   B
                 </div>
                 <div className="flex-1 min-w-0 text-left">
@@ -138,34 +157,46 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </div>
               </button>
 
-              {userMenuOpen && (
-                <div className="absolute left-0 bottom-full mb-1 w-52 bg-white border border-outline-variant rounded-md shadow-lg z-50 overflow-hidden animate-in origin-bottom-left">
-                  <div className="p-1.5">
-                    <button className="w-full flex items-center gap-3 px-3 py-2 rounded text-body-md text-on-surface hover:bg-surface-container transition-colors">
-                      <User size={16} className="text-on-surface-variant" />
-                      Perfil
-                    </button>
-                    <button className="w-full flex items-center gap-3 px-3 py-2 rounded text-body-md text-on-surface hover:bg-surface-container transition-colors">
-                      <LifeBuoy size={16} className="text-on-surface-variant" />
-                      Soporte
-                    </button>
-                    <hr className="border-outline-variant my-1 mx-2" />
-                    <button className="w-full flex items-center gap-3 px-3 py-2 rounded text-body-md text-error hover:bg-error-container transition-colors">
-                      <LogOut size={16} />
-                      Cerrar sesión
-                    </button>
-                  </div>
-                </div>
-              )}
+              <AnimatePresence>
+                {userMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 4 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute left-0 bottom-full mb-1 w-52 bg-white border border-black/5 rounded-md shadow-xl z-50 overflow-hidden"
+                  >
+                    <div className="p-1.5">
+                      <button className="w-full flex items-center gap-3 px-3 py-2 rounded text-body-md text-on-surface hover:bg-surface-container transition-colors">
+                        <User size={16} className="text-on-surface-variant" />
+                        Perfil
+                      </button>
+                      <button className="w-full flex items-center gap-3 px-3 py-2 rounded text-body-md text-on-surface hover:bg-surface-container transition-colors">
+                        <LifeBuoy size={16} className="text-on-surface-variant" />
+                        Soporte
+                      </button>
+                      <hr className="border-outline-variant my-1 mx-2" />
+                      <button className="w-full flex items-center gap-3 px-3 py-2 rounded text-body-md text-error hover:bg-error-container transition-colors">
+                        <LogOut size={16} />
+                        Cerrar sesión
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
         </div>
-      </aside>
+      </motion.aside>
 
       {/* ─── Main ─── */}
-      <div className={`flex-1 transition-all duration-300 ease-in-out ${collapsed ? "ml-[64px]" : "ml-[260px]"}`}>
+      <motion.div
+        animate={{ marginLeft: collapsed ? 64 : 260 }}
+        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+        className="flex-1"
+      >
         {/* Topbar */}
-        <header className="sticky top-0 z-30 h-14 border-b border-black/5 bg-white/80 backdrop-blur-xl flex items-center justify-between px-6">
+        <header className="sticky top-0 z-30 h-14 border-b border-black/[0.04] bg-white/70 backdrop-blur-2xl flex items-center justify-between px-6">
           <div className="flex items-center gap-3">
             {collapsed && (
               <button
@@ -176,7 +207,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <PanelLeftOpen size={18} />
               </button>
             )}
-            <h2 className="text-headline-lg text-on-surface">{currentPage}</h2>
+            <motion.h2
+              key={pathname}
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-headline-lg text-on-surface"
+            >
+              {currentPage}
+            </motion.h2>
           </div>
 
           <div className="flex items-center gap-3">
@@ -188,19 +226,35 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 className="w-56 bg-surface-low border border-outline-variant rounded pl-9 pr-4 py-1.5 text-body-md text-on-surface placeholder-on-surface-variant focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all outline-none"
               />
             </div>
-            <button className="relative p-2 rounded hover:bg-surface-container transition-colors">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="relative p-2 rounded hover:bg-surface-container transition-colors"
+            >
               <Bell size={18} className="text-on-surface-variant" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-secondary rounded-full" />
-            </button>
-            <button className="p-2 rounded hover:bg-surface-container transition-colors">
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-secondary rounded-full animate-pulse" />
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="p-2 rounded hover:bg-surface-container transition-colors"
+            >
               <HelpCircle size={18} className="text-on-surface-variant" />
-            </button>
+            </motion.button>
           </div>
         </header>
 
         {/* Content */}
-        <main className="p-6 md:p-8">{children}</main>
-      </div>
+        <motion.main
+          key={pathname}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          className="p-6 md:p-8"
+        >
+          {children}
+        </motion.main>
+      </motion.div>
     </div>
   );
 }
