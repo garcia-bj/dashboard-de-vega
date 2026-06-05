@@ -143,7 +143,7 @@ export default function DashboardPage() {
         {metrics.map((metric) => (
           <div key={metric.label} className="card p-6">
             <div className="flex items-start justify-between mb-4">
-              <div className={`p-3 rounded-lg ${metric.color}`}>
+              <div className={`p-3 rounded ${metric.color}`}>
                 <metric.icon size={22} />
               </div>
               <span className="text-label-sm text-secondary flex items-center gap-1">
@@ -176,9 +176,9 @@ export default function DashboardPage() {
               return (
                 <div
                   key={pub.id}
-                  className="flex items-start gap-4 p-4 rounded-xl bg-surface-low hover:bg-surface-container transition-colors cursor-pointer"
+                  className="flex items-start gap-4 p-4 rounded-md bg-surface-low hover:bg-surface-container transition-colors cursor-pointer"
                 >
-                  <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center flex-shrink-0">
+                  <div className="w-12 h-12 rounded bg-surface-container flex items-center justify-center flex-shrink-0">
                     <ImageIcon size={22} className="text-on-surface-variant" />
                   </div>
 
@@ -233,10 +233,10 @@ export default function DashboardPage() {
             {platforms.map((platform) => (
               <div
                 key={platform.name}
-                className="p-4 rounded-xl bg-surface-low"
+                className="p-4 rounded-md bg-surface-low"
               >
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center">
+                  <div className="w-10 h-10 rounded bg-surface-container flex items-center justify-center">
                     <platform.icon size={22} className="text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">

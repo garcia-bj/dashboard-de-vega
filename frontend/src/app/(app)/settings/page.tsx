@@ -109,7 +109,7 @@ export default function SettingsPage() {
       {/* ─── Section 1: Perfil ─── */}
       <div className="card p-6">
         <div className="flex items-center gap-3 mb-6 pb-4 border-b border-outline-variant">
-          <div className="p-2 rounded-lg bg-primary-fixed">
+          <div className="p-2 rounded bg-primary-fixed">
             <Store size={20} className="text-primary" />
           </div>
           <h3 className="text-title-md text-on-surface">Perfil del Estudio</h3>
@@ -139,7 +139,7 @@ export default function SettingsPage() {
 
           <div className="col-span-2">
             <label className="block text-label-sm text-on-surface mb-2">Logo del Estudio</label>
-            <div className="border-2 border-dashed border-outline-variant rounded-xl p-8 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-primary/40 hover:bg-surface-low transition-colors">
+            <div className="border-2 border-dashed border-outline-variant rounded-md p-8 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-primary/40 hover:bg-surface-low transition-colors">
               <div className="w-16 h-16 rounded-full bg-primary-fixed flex items-center justify-center">
                 <Upload size={24} className="text-primary" />
               </div>
@@ -176,7 +176,7 @@ export default function SettingsPage() {
       {/* ─── Section 2: Configuración de IA ─── */}
       <div className="card p-6">
         <div className="flex items-center gap-3 mb-6 pb-4 border-b border-outline-variant">
-          <div className="p-2 rounded-lg bg-secondary-fixed">
+          <div className="p-2 rounded bg-secondary-fixed">
             <Sparkles size={20} className="text-secondary-dark" />
           </div>
           <h3 className="text-title-md text-on-surface">Configuración de IA</h3>
@@ -312,7 +312,7 @@ export default function SettingsPage() {
       {/* ─── Section 3: Redes Sociales ─── */}
       <div className="card p-6">
         <div className="flex items-center gap-3 mb-6 pb-4 border-b border-outline-variant">
-          <div className="p-2 rounded-lg bg-primary-fixed">
+          <div className="p-2 rounded bg-primary-fixed">
             <Share2 size={20} className="text-primary" />
           </div>
           <h3 className="text-title-md text-on-surface">Redes Sociales</h3>
@@ -322,10 +322,10 @@ export default function SettingsPage() {
           {socialAccounts.map((account) => (
             <div
               key={account.id}
-              className="flex items-center justify-between p-4 rounded-xl bg-surface-low"
+              className="flex items-center justify-between p-4 rounded-md bg-surface-low"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center">
+                <div className="w-10 h-10 rounded bg-surface-container flex items-center justify-center">
                   <account.icon size={20} className="text-primary" />
                 </div>
                 <div>
@@ -356,7 +356,7 @@ export default function SettingsPage() {
       {/* ─── Section 4: Notificaciones ─── */}
       <div className="card p-6">
         <div className="flex items-center gap-3 mb-6 pb-4 border-b border-outline-variant">
-          <div className="p-2 rounded-lg bg-secondary-fixed">
+          <div className="p-2 rounded bg-secondary-fixed">
             <Bell size={20} className="text-secondary-dark" />
           </div>
           <h3 className="text-title-md text-on-surface">Notificaciones</h3>
@@ -431,16 +431,16 @@ export default function SettingsPage() {
       {/* ─── Section 5: Seguridad ─── */}
       <div className="card p-6">
         <div className="flex items-center gap-3 mb-6 pb-4 border-b border-outline-variant">
-          <div className="p-2 rounded-lg bg-surface-container-high">
+          <div className="p-2 rounded bg-surface-container-high">
             <Shield size={20} className="text-tertiary-dark" />
           </div>
           <h3 className="text-title-md text-on-surface">Seguridad</h3>
         </div>
 
         <div className="space-y-1">
-          <button className="w-full flex items-center justify-between p-4 rounded-xl hover:bg-surface-low transition-colors">
+          <button className="w-full flex items-center justify-between p-4 rounded-md hover:bg-surface-low transition-colors">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center">
+              <div className="w-10 h-10 rounded bg-surface-container flex items-center justify-center">
                 <RotateCcw size={20} className="text-on-surface-variant" />
               </div>
               <div className="text-left">
@@ -451,9 +451,9 @@ export default function SettingsPage() {
             <ChevronRight size={20} className="text-on-surface-variant" />
           </button>
 
-          <button className="w-full flex items-center justify-between p-4 rounded-xl hover:bg-surface-low transition-colors">
+          <button className="w-full flex items-center justify-between p-4 rounded-md hover:bg-surface-low transition-colors">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center">
+              <div className="w-10 h-10 rounded bg-surface-container flex items-center justify-center">
                 <Shield size={20} className="text-on-surface-variant" />
               </div>
               <div className="text-left">

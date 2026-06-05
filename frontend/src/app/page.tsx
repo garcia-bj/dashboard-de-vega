@@ -14,14 +14,14 @@ export default function Home() {
       <div className="flex gap-4">
         <Link
           href="/dashboard"
-          className="bg-secondary hover:bg-secondary-hover text-white font-semibold px-8 py-3.5 rounded-lg transition-colors flex items-center gap-2"
+          className="bg-secondary hover:bg-secondary-hover text-white font-semibold px-8 py-3.5 rounded transition-colors flex items-center gap-2"
         >
           <BarChart3 size={20} />
           Ir al Dashboard
         </Link>
         <Link
           href="/generate"
-          className="border border-white/20 text-white hover:bg-white/10 font-semibold px-8 py-3.5 rounded-lg transition-colors flex items-center gap-2"
+          className="border border-white/20 text-white hover:bg-white/10 font-semibold px-8 py-3.5 rounded transition-colors flex items-center gap-2"
         >
           <Wand2 size={20} />
           Generar Imagen

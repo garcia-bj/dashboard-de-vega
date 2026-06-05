@@ -134,14 +134,14 @@ export default function MediaPage() {
           <div className="relative">
             <button
               onClick={() => setDateRangeOpen(!dateRangeOpen)}
-              className="flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg text-body-md text-on-surface hover:bg-surface-container transition-colors"
+              className="flex items-center gap-2 px-4 py-2 border border-outline-variant rounded text-body-md text-on-surface hover:bg-surface-container transition-colors"
             >
               <CalendarDays size={16} className="text-on-surface-variant" />
               {dateRange}
               <ChevronDown size={16} className={`transition-transform ${dateRangeOpen ? "rotate-180" : ""}`} />
             </button>
             {dateRangeOpen && (
-              <div className="absolute top-full left-0 mt-1 bg-white border border-outline-variant rounded-lg shadow-lg z-20 overflow-hidden min-w-[200px]">
+              <div className="absolute top-full left-0 mt-1 bg-white border border-outline-variant rounded shadow-lg z-20 overflow-hidden min-w-[200px]">
                 {dateRanges.map((r) => (
                   <button
                     key={r}
@@ -177,7 +177,7 @@ export default function MediaPage() {
         </div>
 
         {/* View toggle */}
-        <div className="flex items-center gap-1 p-1 bg-surface-container rounded-lg">
+        <div className="flex items-center gap-1 p-1 bg-surface-container rounded">
           <button
             onClick={() => setViewMode("grid")}
             className={`p-2 rounded-md transition-colors ${
@@ -215,7 +215,7 @@ export default function MediaPage() {
               >
                 <div className="flex items-start gap-4">
                   {/* Thumbnail */}
-                  <div className="w-24 h-24 rounded-lg bg-surface-container flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  <div className="w-24 h-24 rounded bg-surface-container flex items-center justify-center flex-shrink-0 overflow-hidden">
                     <Sparkles size={28} className="text-on-surface-variant opacity-40" />
                   </div>
 
@@ -256,16 +256,16 @@ export default function MediaPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="p-2 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors">
+                    <button className="p-2 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors">
                       <Eye size={18} />
                     </button>
-                    <button className="p-2 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors">
+                    <button className="p-2 rounded hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors">
                       <Edit3 size={18} />
                     </button>
-                    <button className="p-2 rounded-lg hover:bg-error-container text-on-surface-variant hover:text-error transition-colors">
+                    <button className="p-2 rounded hover:bg-error-container text-on-surface-variant hover:text-error transition-colors">
                       <Trash2 size={18} />
                     </button>
-                    <button className="p-2 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors">
+                    <button className="p-2 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors">
                       <MoreVertical size={18} />
                     </button>
                   </div>
@@ -346,7 +346,7 @@ export default function MediaPage() {
           <button
             disabled={page === 1}
             onClick={() => setPage(page - 1)}
-            className="p-2 rounded-lg hover:bg-surface-container disabled:opacity-30 disabled:cursor-not-allowed text-on-surface-variant transition-colors"
+            className="p-2 rounded hover:bg-surface-container disabled:opacity-30 disabled:cursor-not-allowed text-on-surface-variant transition-colors"
           >
             <ChevronLeft size={18} />
           </button>
@@ -355,7 +355,7 @@ export default function MediaPage() {
             <button
               key={p}
               onClick={() => setPage(p)}
-              className={`w-9 h-9 rounded-lg text-body-md font-medium transition-colors ${
+              className={`w-9 h-9 rounded text-body-md font-medium transition-colors ${
                 p === page
                   ? "bg-primary text-white"
                   : "text-on-surface-variant hover:bg-surface-container"
@@ -368,7 +368,7 @@ export default function MediaPage() {
           <button
             disabled={page === totalPages}
             onClick={() => setPage(page + 1)}
-            className="p-2 rounded-lg hover:bg-surface-container disabled:opacity-30 disabled:cursor-not-allowed text-on-surface-variant transition-colors"
+            className="p-2 rounded hover:bg-surface-container disabled:opacity-30 disabled:cursor-not-allowed text-on-surface-variant transition-colors"
           >
             <ChevronRight size={18} />
           </button>

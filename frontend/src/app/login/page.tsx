@@ -44,7 +44,7 @@ export default function LoginPage() {
 
         <div className="relative z-10 max-w-lg">
           <div className="flex items-center gap-3 mb-12">
-            <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
+            <div className="w-12 h-12 rounded-md bg-secondary flex items-center justify-center">
               <Sparkles size={24} className="text-white" />
             </div>
             <h1 className="text-4xl font-bold text-white tracking-tight">De Vega</h1>
@@ -88,7 +88,7 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-3 mb-12">
-            <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+            <div className="w-10 h-10 rounded-md bg-secondary flex items-center justify-center">
               <Sparkles size={20} className="text-white" />
             </div>
             <h1 className="text-2xl font-bold text-on-surface">De Vega</h1>
@@ -103,7 +103,7 @@ export default function LoginPage() {
 
           <form onSubmit={handleLogin} className="space-y-5">
             {error && (
-              <div className="bg-error-container text-error text-body-md px-4 py-3 rounded-lg border border-error/20">
+              <div className="bg-error-container text-error text-body-md px-4 py-3 rounded border border-error/20">
                 {error}
               </div>
             )}

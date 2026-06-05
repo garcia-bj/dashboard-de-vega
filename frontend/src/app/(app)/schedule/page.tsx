@@ -124,7 +124,7 @@ export default function SchedulePage() {
                 className="group cursor-pointer"
               >
                 <div
-                  className={`${img.color} aspect-square rounded-lg flex items-center justify-center mb-2 transition-transform group-hover:scale-[1.02]`}
+                  className={`${img.color} aspect-square rounded flex items-center justify-center mb-2 transition-transform group-hover:scale-[1.02]`}
                 >
                   <ImageIcon size={28} className="text-on-surface-variant opacity-60" />
                 </div>
@@ -150,7 +150,7 @@ export default function SchedulePage() {
             {days.map((day) => (
               <div
                 key={day}
-                className="flex-1 text-center py-2 rounded-lg bg-surface-container text-label-sm text-on-surface-variant"
+                className="flex-1 text-center py-2 rounded bg-surface-container text-label-sm text-on-surface-variant"
               >
                 {day}
               </div>
@@ -171,7 +171,7 @@ export default function SchedulePage() {
               <ChevronDown size={16} className={`transition-transform ${weekOpen ? "rotate-180" : ""}`} />
             </button>
             {weekOpen && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-outline-variant rounded-lg shadow-lg z-20 overflow-hidden">
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-outline-variant rounded shadow-lg z-20 overflow-hidden">
                 {weeks.map((w) => (
                   <button
                     key={w}
@@ -201,7 +201,7 @@ export default function SchedulePage() {
             ].map(({ key, label, icon: Icon }) => (
               <div key={key}>
                 <label className="block text-label-sm text-on-surface mb-2">{label}</label>
-                <div className="flex flex-wrap gap-2 min-h-[40px] p-2 rounded-lg bg-surface-low border border-outline-variant">
+                <div className="flex flex-wrap gap-2 min-h-[40px] p-2 rounded bg-surface-low border border-outline-variant">
                   {activeSlots[key].map((item) => (
                     <span
                       key={item}
@@ -275,7 +275,7 @@ export default function SchedulePage() {
             </div>
 
             {/* Preview content */}
-            <div className="bg-tertiary rounded-lg p-5 mb-4">
+            <div className="bg-tertiary rounded p-5 mb-4">
               <p className="text-white text-lg font-bold mb-4">De Vega</p>
 
               <div className="space-y-3">
@@ -297,13 +297,13 @@ export default function SchedulePage() {
 
             {/* Platform buttons */}
             <div className="flex items-center gap-2 mb-4">
-              <span className="w-8 h-8 rounded-lg bg-[#1877F2]/10 flex items-center justify-center">
+              <span className="w-8 h-8 rounded bg-[#1877F2]/10 flex items-center justify-center">
                 <Facebook size={16} className="text-[#1877F2]" />
               </span>
-              <span className="w-8 h-8 rounded-lg bg-[#E4405F]/10 flex items-center justify-center">
+              <span className="w-8 h-8 rounded bg-[#E4405F]/10 flex items-center justify-center">
                 <Instagram size={16} className="text-[#E4405F]" />
               </span>
-              <span className="w-8 h-8 rounded-lg bg-[#E4405F]/10 flex items-center justify-center">
+              <span className="w-8 h-8 rounded bg-[#E4405F]/10 flex items-center justify-center">
                 <Share2 size={16} className="text-[#E4405F]" />
               </span>
             </div>
@@ -328,13 +328,13 @@ export default function SchedulePage() {
           <div className="relative">
             <button
               onClick={() => setStatusOpen(!statusOpen)}
-              className="flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg text-body-md text-on-surface hover:bg-surface-container transition-colors"
+              className="flex items-center gap-2 px-4 py-2 border border-outline-variant rounded text-body-md text-on-surface hover:bg-surface-container transition-colors"
             >
               Filtrar por: <span className="font-medium">{statusFilter}</span>
               <ChevronDown size={16} className={`transition-transform ${statusOpen ? "rotate-180" : ""}`} />
             </button>
             {statusOpen && (
-              <div className="absolute top-full right-0 mt-1 bg-white border border-outline-variant rounded-lg shadow-lg z-20 overflow-hidden min-w-[160px]">
+              <div className="absolute top-full right-0 mt-1 bg-white border border-outline-variant rounded shadow-lg z-20 overflow-hidden min-w-[160px]">
                 {["Todos", "Publicado", "Programado", "Borrador"].map((s) => (
                   <button
                     key={s}
@@ -389,10 +389,10 @@ export default function SchedulePage() {
                   </td>
                   <td className="py-3.5 px-4">
                     <div className="flex items-center justify-end gap-2">
-                      <button className="p-1.5 rounded-lg hover:bg-surface-container transition-colors text-on-surface-variant hover:text-on-surface">
+                      <button className="p-1.5 rounded hover:bg-surface-container transition-colors text-on-surface-variant hover:text-on-surface">
                         <Eye size={16} />
                       </button>
-                      <button className="p-1.5 rounded-lg hover:bg-surface-container transition-colors text-on-surface-variant hover:text-primary">
+                      <button className="p-1.5 rounded hover:bg-surface-container transition-colors text-on-surface-variant hover:text-primary">
                         <Edit3 size={16} />
                       </button>
                     </div>

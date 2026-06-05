@@ -68,7 +68,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {collapsed ? (
             <button
               onClick={() => setCollapsed(false)}
-              className="p-2 rounded-lg hover:bg-white/10 text-surface-dim hover:text-white transition-colors mx-auto"
+              className="p-2 rounded hover:bg-white/10 text-surface-dim hover:text-white transition-colors mx-auto"
               title="Expandir menú"
             >
               <Sparkles size={22} className="text-secondary" />
@@ -81,7 +81,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </Link>
               <button
                 onClick={() => setCollapsed(true)}
-                className="p-1.5 rounded-lg hover:bg-white/10 text-surface-dim hover:text-white transition-colors flex-shrink-0"
+                className="p-1.5 rounded hover:bg-white/10 text-surface-dim hover:text-white transition-colors flex-shrink-0"
                 title="Colapsar menú"
               >
                 <PanelLeftClose size={18} />
@@ -99,7 +99,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 title={collapsed ? item.label : undefined}
-                className={`flex items-center gap-3 rounded-lg transition-all duration-150 ${
+                className={`flex items-center gap-3 rounded transition-all duration-150 ${
                   collapsed ? "justify-center px-2 py-3" : "px-3 py-2.5"
                 } ${
                   isActive
@@ -127,7 +127,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center gap-3 w-full px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
+                className="flex items-center gap-3 w-full px-2 py-1.5 rounded hover:bg-white/5 transition-colors"
               >
                 <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">
                   B
@@ -139,18 +139,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </button>
 
               {userMenuOpen && (
-                <div className="absolute left-0 bottom-full mb-1 w-52 bg-white border border-outline-variant rounded-xl shadow-lg z-50 overflow-hidden animate-in origin-bottom-left">
+                <div className="absolute left-0 bottom-full mb-1 w-52 bg-white border border-outline-variant rounded-md shadow-lg z-50 overflow-hidden animate-in origin-bottom-left">
                   <div className="p-1.5">
-                    <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-body-md text-on-surface hover:bg-surface-container transition-colors">
+                    <button className="w-full flex items-center gap-3 px-3 py-2 rounded text-body-md text-on-surface hover:bg-surface-container transition-colors">
                       <User size={16} className="text-on-surface-variant" />
                       Perfil
                     </button>
-                    <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-body-md text-on-surface hover:bg-surface-container transition-colors">
+                    <button className="w-full flex items-center gap-3 px-3 py-2 rounded text-body-md text-on-surface hover:bg-surface-container transition-colors">
                       <LifeBuoy size={16} className="text-on-surface-variant" />
                       Soporte
                     </button>
                     <hr className="border-outline-variant my-1 mx-2" />
-                    <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-body-md text-error hover:bg-error-container transition-colors">
+                    <button className="w-full flex items-center gap-3 px-3 py-2 rounded text-body-md text-error hover:bg-error-container transition-colors">
                       <LogOut size={16} />
                       Cerrar sesión
                     </button>
@@ -170,7 +170,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {collapsed && (
               <button
                 onClick={() => setCollapsed(false)}
-                className="p-1.5 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors"
+                className="p-1.5 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors"
                 title="Expandir menú"
               >
                 <PanelLeftOpen size={18} />
@@ -185,14 +185,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <input
                 type="text"
                 placeholder="Buscar..."
-                className="w-56 bg-surface-low border border-outline-variant rounded-lg pl-9 pr-4 py-1.5 text-body-md text-on-surface placeholder-on-surface-variant focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all outline-none"
+                className="w-56 bg-surface-low border border-outline-variant rounded pl-9 pr-4 py-1.5 text-body-md text-on-surface placeholder-on-surface-variant focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all outline-none"
               />
             </div>
-            <button className="relative p-2 rounded-lg hover:bg-surface-container transition-colors">
+            <button className="relative p-2 rounded hover:bg-surface-container transition-colors">
               <Bell size={18} className="text-on-surface-variant" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-secondary rounded-full" />
             </button>
-            <button className="p-2 rounded-lg hover:bg-surface-container transition-colors">
+            <button className="p-2 rounded hover:bg-surface-container transition-colors">
               <HelpCircle size={18} className="text-on-surface-variant" />
             </button>
           </div>

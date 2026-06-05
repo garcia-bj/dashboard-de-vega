@@ -145,7 +145,7 @@ export default function GeneratePage() {
                 className="w-full input-field flex items-center justify-between text-left"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-secondary-fixed flex items-center justify-center">
+                  <div className="w-9 h-9 rounded bg-secondary-fixed flex items-center justify-center">
                     <Sparkles size={18} className="text-secondary-dark" />
                   </div>
                   <div>
@@ -157,7 +157,7 @@ export default function GeneratePage() {
               </button>
 
               {modelOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-outline-variant rounded-lg shadow-lg z-20 overflow-hidden">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-outline-variant rounded shadow-lg z-20 overflow-hidden">
                   {models.map((model) => (
                     <button
                       key={model.id}
@@ -173,7 +173,7 @@ export default function GeneratePage() {
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-secondary-fixed flex items-center justify-center flex-shrink-0">
+                        <div className="w-9 h-9 rounded bg-secondary-fixed flex items-center justify-center flex-shrink-0">
                           <Sparkles size={18} className="text-secondary-dark" />
                         </div>
                         <div>
@@ -239,7 +239,7 @@ export default function GeneratePage() {
                   <ChevronDown size={16} className={`transition-transform ${sizeOpen ? "rotate-180" : ""}`} />
                 </button>
                 {sizeOpen && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-outline-variant rounded-lg shadow-lg z-20 overflow-hidden">
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-outline-variant rounded shadow-lg z-20 overflow-hidden">
                     {selectedModel.sizes.map((s) => (
                       <button
                         key={s}
@@ -322,7 +322,7 @@ export default function GeneratePage() {
               )}
             </div>
 
-            <div className="aspect-square rounded-lg bg-surface-container flex items-center justify-center overflow-hidden relative">
+            <div className="aspect-square rounded bg-surface-container flex items-center justify-center overflow-hidden relative">
               {generating ? (
                 <div className="flex flex-col items-center gap-4">
                   <div className="relative">
@@ -392,9 +392,9 @@ export default function GeneratePage() {
               {recentGenerations.map((gen) => (
                 <div
                   key={gen.id}
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-surface-low transition-colors cursor-pointer"
+                  className="flex items-center gap-3 p-3 rounded hover:bg-surface-low transition-colors cursor-pointer"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded bg-surface-container flex items-center justify-center flex-shrink-0">
                     {gen.status === "completed" ? (
                       <ImageIcon size={18} className="text-on-surface-variant" />
                     ) : (
@@ -423,7 +423,7 @@ export default function GeneratePage() {
                 </div>
               ))}
 
-              <button className="w-full flex items-center justify-center gap-2 p-3 rounded-lg border-2 border-dashed border-outline-variant hover:border-primary/30 text-on-surface-variant hover:text-primary transition-colors">
+              <button className="w-full flex items-center justify-center gap-2 p-3 rounded border-2 border-dashed border-outline-variant hover:border-primary/30 text-on-surface-variant hover:text-primary transition-colors">
                 <Plus size={16} />
                 <span className="text-body-md">Nueva Generación</span>
               </button>
