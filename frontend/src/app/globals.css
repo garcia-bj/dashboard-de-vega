@@ -45,16 +45,6 @@ body {
            focus:border-primary focus:ring-2 focus:ring-primary/10
            transition-all duration-200 outline-none w-full;
   }
-
-  .dropdown-item {
-    @apply flex items-center gap-3 px-4 py-3 text-body-md text-on-surface
-           hover:bg-surface-container rounded-lg transition-all duration-150;
-  }
-
-  .dropdown-item-active {
-    @apply flex items-center gap-3 px-4 py-3 text-body-md font-semibold
-           bg-primary/10 text-primary rounded-lg;
-  }
 }
 
 @layer utilities {
@@ -65,11 +55,11 @@ body {
   @keyframes animateIn {
     from {
       opacity: 0;
-      transform: translateY(-4px) scale(0.98);
+      transform: scale(0.95);
     }
     to {
       opacity: 1;
-      transform: translateY(0) scale(1);
+      transform: scale(1);
     }
   }
 }
