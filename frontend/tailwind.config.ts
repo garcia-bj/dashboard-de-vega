@@ -1,86 +1,72 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: "class",
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
       colors: {
-        // Design system: Vegas / De Vega
-        surface: {
-          DEFAULT: "#f9f9ff",
-          dim: "#d3daea",
-          bright: "#f9f9ff",
-          lowest: "#ffffff",
-          low: "#f0f3ff",
-          container: "#e7eefe",
-          "container-high": "#e2e8f8",
-          "container-highest": "#dce2f3",
-        },
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#8b1e3f",
-          dark: "#6c0029",
-          container: "#8b1e3f",
-          fixed: "#ffd9de",
-          "fixed-dim": "#ffb2bf",
-          "on-container": "#ff9db0",
-          hover: "#7a1a36",
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
-          DEFAULT: "#f97316",
-          dark: "#9d4300",
-          container: "#fd761a",
-          fixed: "#ffdbca",
-          "fixed-dim": "#ffb690",
-          hover: "#e8650b",
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
         },
-        tertiary: {
-          DEFAULT: "#111827",
-          dark: "#2d3344",
-          container: "#434a5b",
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
         },
-        outline: {
-          DEFAULT: "#897174",
-          variant: "#ddbfc3",
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
         },
-        on: {
-          surface: "#151c27",
-          "surface-variant": "#564145",
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
         },
-        error: {
-          DEFAULT: "#ba1a1a",
-          container: "#ffdad6",
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
         },
+        sidebar: {
+          DEFAULT: "hsl(var(--sidebar))",
+          foreground: "hsl(var(--sidebar-foreground))",
+          muted: "hsl(var(--sidebar-muted))",
+          accent: "hsl(var(--sidebar-accent))",
+        },
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
       },
-      fontSize: {
-        "display-lg": ["48px", { lineHeight: "56px", letterSpacing: "-0.02em", fontWeight: "700" }],
-        "headline-lg": ["32px", { lineHeight: "40px", letterSpacing: "-0.01em", fontWeight: "600" }],
-        "title-md": ["20px", { lineHeight: "28px", fontWeight: "600" }],
-        "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }],
-        "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }],
-        "label-sm": ["12px", { lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "600" }],
+      keyframes: {
+        "slide-in-from-left": {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(0)" },
+        },
+        "slide-out-to-left": {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-100%)" },
+        },
       },
-      borderRadius: {
-        sm: "0.25rem",
-        DEFAULT: "0.375rem",
-        md: "0.5rem",
-        lg: "0.625rem",
-        xl: "0.75rem",
-        full: "9999px",
-      },
-      spacing: {
-        xs: "0.5rem",
-        sm: "1rem",
-        md: "1.5rem",
-        lg: "2rem",
-        xl: "3rem",
-        gutter: "1.25rem",
+      animation: {
+        "slide-in-from-left": "slide-in-from-left 0.3s ease-out",
+        "slide-out-to-left": "slide-out-to-left 0.3s ease-in",
       },
     },
   },
-  plugins: [],
+  plugins: [require("tailwindcss-animate")],
 };
 
 export default config;
