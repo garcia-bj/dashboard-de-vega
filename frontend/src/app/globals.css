@@ -17,42 +17,59 @@ body {
 
 @layer components {
   .card {
-    @apply bg-white rounded-xl border border-outline-variant;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    @apply bg-white rounded-xl border border-black/5;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
   }
 
   .btn-primary {
     @apply bg-primary text-white font-semibold rounded-lg px-md py-2.5
-           hover:bg-primary-hover transition-colors duration-200
+           hover:bg-primary-hover transition-all duration-200
+           active:scale-[0.98]
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-secondary {
     @apply border border-primary text-primary font-semibold rounded-lg px-md py-2.5
-           hover:bg-primary-fixed hover:text-primary-dark transition-colors duration-200;
+           hover:bg-primary-fixed hover:text-primary-dark transition-all duration-200
+           active:scale-[0.98];
   }
 
   .btn-tertiary {
     @apply text-on-surface-variant font-semibold rounded-lg px-md py-2.5
-           hover:text-primary transition-colors duration-200;
+           hover:text-primary transition-all duration-200;
   }
 
   .input-field {
     @apply bg-surface-low border border-outline-variant rounded-lg px-4 py-2.5
            text-on-surface placeholder-on-surface-variant
            focus:border-primary focus:ring-2 focus:ring-primary/10
-           transition-colors duration-200 outline-none w-full;
+           transition-all duration-200 outline-none w-full;
   }
 
-  .sidebar-link {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-surface-dim
-           hover:text-white hover:bg-white/10 transition-colors duration-150
-           text-body-md font-medium;
+  .dropdown-item {
+    @apply flex items-center gap-3 px-4 py-3 text-body-md text-on-surface
+           hover:bg-surface-container rounded-lg transition-all duration-150;
   }
 
-  .sidebar-link-active {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-white
-           bg-white/10 border-l-[3px] border-secondary
-           text-body-md font-semibold;
+  .dropdown-item-active {
+    @apply flex items-center gap-3 px-4 py-3 text-body-md font-semibold
+           bg-primary/10 text-primary rounded-lg;
+  }
+}
+
+@layer utilities {
+  .animate-in {
+    animation: animateIn 200ms ease-out;
+  }
+
+  @keyframes animateIn {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
   }
 }
