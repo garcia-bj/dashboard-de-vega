@@ -70,4 +70,17 @@ export const api = {
       request(`/api/social/accounts/${id}`, { method: "DELETE", token }),
     metaCallback: (code: string) => request(`/api/social/meta/callback?code=${code}`),
   },
+
+  settings: {
+    get: (token: string) => request("/api/settings/", { token }),
+    update: (data: unknown, token: string) =>
+      request("/api/settings/", { method: "PUT", body: data, token }),
+  },
+
+  publish: {
+    generate: (data: unknown, token: string) =>
+      request("/api/publish/generate", { method: "POST", body: data, token }),
+    publish: (publicationId: string, token: string) =>
+      request(`/api/publish/publication/${publicationId}`, { method: "POST", token }),
+  },
 };

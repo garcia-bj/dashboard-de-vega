@@ -125,3 +125,10 @@ class GenerateResponse(BaseModel):
     prompt: str
     duration_ms: int
     cost_usd: float | None = None
+
+
+class PublishRequest(BaseModel):
+    publication_id: UUID
+    targets: list[PublishTarget] | None = None
+    image_url: str | None = None
+    caption: str | None = None

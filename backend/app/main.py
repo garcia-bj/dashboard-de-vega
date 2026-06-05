@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.db.database import init_db
-from app.routers import auth, publications, social, media
+from app.routers import auth, publications, social, media, settings as settings_router, publish
 
 settings = get_settings()
 
@@ -33,6 +33,8 @@ app.include_router(auth.router)
 app.include_router(publications.router)
 app.include_router(social.router)
 app.include_router(media.router)
+app.include_router(settings_router.router)
+app.include_router(publish.router)
 
 
 @app.get("/health")

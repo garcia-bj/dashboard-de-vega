@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Toaster } from "sonner";
+import { useAuthStore } from "@/store/auth";
 import {
   LayoutDashboard,
   Wand2,
@@ -32,9 +33,23 @@ const navItems = [
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const token = useAuthStore((s) => s.token);
+  const logout = useAuthStore((s) => s.logout);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("token");
+    if (!stored && !token) router.replace("/login");
+  }, [token, router]);
+
+  const handleLogout = () => {
+    logout();
+    setUserMenuOpen(false);
+    router.replace("/login");
+  };
 
   const currentPage = navItems.find((i) => pathname?.startsWith(i.href))?.label || "De Vega";
 
@@ -176,7 +191,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         Soporte
                       </button>
                       <hr className="border-outline-variant my-1 mx-2" />
-                      <button className="w-full flex items-center gap-3 px-3 py-2 rounded text-body-md text-error hover:bg-error-container transition-colors">
+                      <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2 rounded text-body-md text-error hover:bg-error-container transition-colors">
                         <LogOut size={16} />
                         Cerrar sesión
                       </button>
