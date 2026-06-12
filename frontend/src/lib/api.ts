@@ -9,8 +9,9 @@ interface RequestOptions {
 async function request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const { method = "GET", body, token } = options;
 
+  const isForm = body instanceof URLSearchParams;
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    "Content-Type": isForm ? "application/x-www-form-urlencoded" : "application/json",
   };
 
   if (token) {
@@ -20,7 +21,7 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
   const res = await fetch(`${API_BASE}${endpoint}`, {
     method,
     headers,
-    body: body ? JSON.stringify(body) : undefined,
+    body: body ? (isForm ? body.toString() : JSON.stringify(body)) : undefined,
   });
 
   if (!res.ok) {
@@ -32,55 +33,137 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
   return res.json();
 }
 
-// ── Auth ──
+// ── Types ──
+export interface UserOut {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface TokenOut {
+  access_token: string;
+  token_type: string;
+  user: UserOut;
+}
+
+export interface PublicationOut {
+  id: string;
+  title: string;
+  prompt: string;
+  caption: string | null;
+  ai_model: string;
+  image_url: string | null;
+  status: string;
+  targets: string[];
+  scheduled_at: string;
+  published_at: string | null;
+  created_at: string;
+}
+
+export interface SocialAccountOut {
+  id: string;
+  provider: string;
+  page_id: string;
+  page_name: string;
+  instagram_business_id: string | null;
+  is_active: boolean;
+  token_expires_at: string | null;
+}
+
+export interface SettingsOut {
+  full_name: string | null;
+  email: string;
+  logo: string | null;
+  has_logo: boolean;
+  reference_image: string | null;
+  has_reference_image: boolean;
+  gemini_configured: boolean;
+  openai_configured: boolean;
+  openrouter_configured: boolean;
+}
+
+export interface GenerateResult {
+  image_url: string | null;
+  model: string;
+  raw_response: unknown | null;
+}
+
+// ── API ──
 export const api = {
   auth: {
     login: (email: string, password: string) =>
-      request("/api/auth/login", {
+      request<TokenOut>("/api/auth/login", {
         method: "POST",
         body: new URLSearchParams({ username: email, password }),
       }),
     register: (email: string, password: string, fullName?: string) =>
-      request("/api/auth/register", {
+      request<UserOut>("/api/auth/register", {
         method: "POST",
         body: { email, password, full_name: fullName },
       }),
-    me: (token: string) => request("/api/auth/me", { token }),
+    me: (token: string) => request<UserOut>("/api/auth/me", { token }),
   },
 
   publications: {
     list: (token: string, status?: string) =>
-      request(`/api/publications/${status ? `?status=${status}` : ""}`, { token }),
-    get: (id: string, token: string) => request(`/api/publications/${id}`, { token }),
+      request<PublicationOut[]>(
+        `/api/publications/${status ? `?status=${status}` : ""}`,
+        { token }
+      ),
+    get: (id: string, token: string) =>
+      request<PublicationOut>(`/api/publications/${id}`, { token }),
     create: (data: unknown, token: string) =>
-      request("/api/publications/", { method: "POST", body: data, token }),
+      request<PublicationOut>("/api/publications/", { method: "POST", body: data, token }),
     update: (id: string, data: unknown, token: string) =>
-      request(`/api/publications/${id}`, { method: "PATCH", body: data, token }),
+      request<PublicationOut>(`/api/publications/${id}`, { method: "PATCH", body: data, token }),
     delete: (id: string, token: string) =>
-      request(`/api/publications/${id}`, { method: "DELETE", token }),
+      request<void>(`/api/publications/${id}`, { method: "DELETE", token }),
     generate: (data: unknown, token: string) =>
-      request("/api/publications/generate", { method: "POST", body: data, token }),
+      request<unknown>("/api/publications/generate", { method: "POST", body: data, token }),
   },
 
   social: {
-    listAccounts: (token: string) => request("/api/social/accounts", { token }),
+    listAccounts: (token: string) =>
+      request<SocialAccountOut[]>("/api/social/accounts", { token }),
     connectAccount: (data: unknown, token: string) =>
-      request("/api/social/accounts", { method: "POST", body: data, token }),
+      request<SocialAccountOut>("/api/social/accounts", { method: "POST", body: data, token }),
     disconnectAccount: (id: string, token: string) =>
-      request(`/api/social/accounts/${id}`, { method: "DELETE", token }),
-    metaCallback: (code: string) => request(`/api/social/meta/callback?code=${code}`),
+      request<void>(`/api/social/accounts/${id}`, { method: "DELETE", token }),
+    metaCallback: (code: string) =>
+      request<unknown>(`/api/social/meta/callback?code=${code}`),
   },
 
   settings: {
-    get: (token: string) => request("/api/settings/", { token }),
+    get: (token: string) => request<SettingsOut>("/api/settings/", { token }),
     update: (data: unknown, token: string) =>
-      request("/api/settings/", { method: "PUT", body: data, token }),
+      request<SettingsOut>("/api/settings/", { method: "PUT", body: data, token }),
+    uploadLogo: (file: File, token: string) => {
+      const form = new FormData();
+      form.append("file", file);
+      return fetch(`${API_BASE}/api/settings/upload-logo`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      }).then((r) => r.json() as Promise<{ logo: string }>);
+    },
+    uploadReference: (file: File, token: string) => {
+      const form = new FormData();
+      form.append("file", file);
+      return fetch(`${API_BASE}/api/settings/upload-reference`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      }).then((r) => r.json() as Promise<{ reference_image: string }>);
+    },
   },
 
   publish: {
     generate: (data: unknown, token: string) =>
-      request("/api/publish/generate", { method: "POST", body: data, token }),
+      request<GenerateResult>("/api/publish/generate", { method: "POST", body: data, token }),
     publish: (publicationId: string, token: string) =>
-      request(`/api/publish/publication/${publicationId}`, { method: "POST", token }),
+      request<unknown>(`/api/publish/publication/${publicationId}`, { method: "POST", token }),
   },
 };

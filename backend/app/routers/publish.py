@@ -15,7 +15,10 @@ settings = get_settings()
 router = APIRouter(prefix="/api/publish", tags=["publish"])
 
 meta_service = MetaService()
-N8N_WEBHOOK = "https://asc-n8n.autosalescloser.com/webhook/img_asd"
+
+
+def _n8n_img_url() -> str:
+    return settings.N8N_IMG_GENERATION_URL or f"{settings.N8N_WEBHOOK_URL}{settings.N8N_IMAGE_GEN_WEBHOOK}"
 
 
 @router.post("/generate")
@@ -24,7 +27,6 @@ async def generate_via_n8n(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Proxy: envía prompt + assets al webhook n8n para generar imagen"""
     body: dict = {
         "prompt": payload.get("prompt", ""),
         "model": payload.get("model", "gemini"),
@@ -44,7 +46,7 @@ async def generate_via_n8n(
 
     try:
         async with httpx.AsyncClient(timeout=120) as client:
-            res = await client.post(N8N_WEBHOOK, json=body)
+            res = await client.post(_n8n_img_url(), json=body)
             res.raise_for_status()
             data = res.json()
     except httpx.HTTPError as e:

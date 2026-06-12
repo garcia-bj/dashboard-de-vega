@@ -1,38 +1,100 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/store/auth";
+import { api, type PublicationOut } from "@/lib/api";
 import {
   Plus, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Grid3X3, List,
-  MoreVertical, Clock, CheckCircle2, Edit3, AlertCircle, Sparkles, Trash2, Eye,
+  MoreVertical, Clock, CheckCircle2, Edit3, AlertCircle, Sparkles, Trash2, Eye, Loader2,
 } from "lucide-react";
-
-const items = [
-  { id: "1", title: "Viernes Promo", desc: "Plato gourmet con luces de neón y ambiente festivo cinematográfico", model: "Gemini", status: "published" as const, date: "Hoy 18:00", platforms: 2 },
-  { id: "2", title: "Sábado Especial", desc: "Cóctel artesanal con frutas tropicales sobre fondo oscuro", model: "DALL·E 3", status: "scheduled" as const, date: "Mañana 08:00", platforms: 1 },
-  { id: "3", title: "Sin categoría", desc: "Pasta artesanal con hongos silvestres y trufa blanca", model: "Flux", status: "draft" as const, date: "Hace 2h", platforms: 0 },
-  { id: "4", title: "Especial Día", desc: "Taco de ribeye con salsa aguacate, iluminación natural", model: "SDXL", status: "published" as const, date: "22 May", platforms: 2 },
-  { id: "5", title: "Menú Saludable", desc: "Bowl de quinua orgánica, vegetales asados y palta", model: "Gemini", status: "published" as const, date: "21 May", platforms: 1 },
-];
 
 const statusConfig: Record<string, { label: string; variant: "success" | "warning" | "ghost" | "destructive" | "default"; icon: typeof CheckCircle2 }> = {
   published: { label: "Publicado", variant: "success", icon: CheckCircle2 },
   scheduled: { label: "Programado", variant: "default", icon: Clock },
+  pending: { label: "Pendiente", variant: "default", icon: Clock },
+  generating: { label: "Generando", variant: "warning", icon: Sparkles },
+  generated: { label: "Generado", variant: "warning", icon: CheckCircle2 },
   draft: { label: "Borrador", variant: "ghost", icon: Edit3 },
   failed: { label: "Falló", variant: "destructive", icon: AlertCircle },
 };
 
+const modelLabel: Record<string, string> = {
+  gemini: "Gemini",
+  openai_dalle: "DALL·E 3",
+  openrouter_flux: "Flux",
+  openrouter_stable_diffusion: "SDXL",
+};
+
 const dateRanges = ["Últimos 7 días", "Últimos 30 días", "Últimos 90 días", "Todo"];
-const statuses = ["Todos", "Publicado", "Programado", "Borrador"];
+const statusFilters = ["Todos", "Publicado", "Programado", "Borrador"];
+
+const STATUS_MAP: Record<string, string[]> = {
+  "Publicado": ["published"],
+  "Programado": ["scheduled", "pending"],
+  "Borrador": ["draft", "generated", "generating"],
+};
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) {
+    return `Hoy ${d.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}`;
+  }
+  return d.toLocaleDateString("es", { day: "numeric", month: "short" });
+}
+
+const PAGE_SIZE = 10;
 
 export default function MediaPage() {
+  const token = useAuthStore((s) => s.token) || (typeof window !== "undefined" ? localStorage.getItem("token") : null);
+  const [all, setAll] = useState<PublicationOut[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
   const [dateOpen, setDateOpen] = useState(false);
   const [dateRange, setDateRange] = useState(dateRanges[1]);
   const [statusFilter, setStatusFilter] = useState("Todos");
   const [view, setView] = useState<"grid" | "list">("list");
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    if (!token) return;
+    api.publications.list(token).then(setAll).catch(() => toast.error("Error al cargar galería")).finally(() => setLoading(false));
+  }, [token]);
+
+  // Date filter
+  const daysMap: Record<string, number> = { "Últimos 7 días": 7, "Últimos 30 días": 30, "Últimos 90 días": 90 };
+  const filtered = all.filter((p) => {
+    if (statusFilter !== "Todos") {
+      const allowed = STATUS_MAP[statusFilter] ?? [];
+      if (!allowed.includes(p.status)) return false;
+    }
+    if (daysMap[dateRange]) {
+      const cutoff = Date.now() - daysMap[dateRange] * 86400000;
+      if (new Date(p.created_at).getTime() < cutoff) return false;
+    }
+    return true;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const handleDelete = async (id: string) => {
+    if (!token) return;
+    setDeleting(id);
+    try {
+      await api.publications.delete(id, token);
+      setAll((prev) => prev.filter((p) => p.id !== id));
+      toast.success("Publicación eliminada");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error al eliminar");
+    } finally { setDeleting(null); }
+  };
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -50,13 +112,15 @@ export default function MediaPage() {
             </button>
             {dateOpen && (
               <div className="absolute top-full left-0 mt-1 rounded-md border bg-popover shadow-md z-20 overflow-hidden min-w-[180px]">
-                {dateRanges.map((r) => <button key={r} onClick={() => { setDateRange(r); setDateOpen(false); }} className={cn("w-full text-left px-3 py-2 text-sm hover:bg-accent", r === dateRange && "bg-accent font-medium")}>{r}</button>)}
+                {dateRanges.map((r) => (
+                  <button key={r} onClick={() => { setDateRange(r); setDateOpen(false); setPage(1); }} className={cn("w-full text-left px-3 py-2 text-sm hover:bg-accent", r === dateRange && "bg-accent font-medium")}>{r}</button>
+                ))}
               </div>
             )}
           </div>
           <div className="flex gap-1">
-            {statuses.map((s) => (
-              <Badge key={s} variant={s === statusFilter ? "default" : "outline"} className="cursor-pointer" onClick={() => setStatusFilter(s)}>{s}</Badge>
+            {statusFilters.map((s) => (
+              <Badge key={s} variant={s === statusFilter ? "default" : "outline"} className="cursor-pointer" onClick={() => { setStatusFilter(s); setPage(1); }}>{s}</Badge>
             ))}
           </div>
         </div>
@@ -66,31 +130,49 @@ export default function MediaPage() {
         </div>
       </div>
 
-      {/* Content */}
-      {view === "list" ? (
+      {loading ? (
+        <div className="flex items-center justify-center h-48"><Loader2 size={28} className="animate-spin text-muted-foreground" /></div>
+      ) : paginated.length === 0 ? (
+        <div className="rounded-md border border-dashed p-12 flex flex-col items-center gap-3 text-muted-foreground">
+          <Sparkles size={36} className="opacity-30" />
+          <p className="text-sm">Sin publicaciones{statusFilter !== "Todos" ? ` con estado "${statusFilter}"` : ""}</p>
+          <Link href="/generate"><Button size="sm" className="gap-2"><Plus size={14} />Crear primera imagen</Button></Link>
+        </div>
+      ) : view === "list" ? (
         <div className="space-y-2">
-          {items.map((item) => {
-            const s = statusConfig[item.status];
+          {paginated.map((item) => {
+            const s = statusConfig[item.status] ?? statusConfig.draft;
             return (
               <div key={item.id} className="rounded-md border bg-card p-3 md:p-4 hover:shadow-sm transition-shadow cursor-pointer group">
                 <div className="flex items-start gap-3">
-                  <div className="w-16 h-16 md:w-20 md:h-20 rounded-md bg-muted flex items-center justify-center flex-shrink-0"><Sparkles size={24} className="text-muted-foreground/30" /></div>
+                  <div className="w-16 h-16 md:w-20 md:h-20 rounded-md bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {item.image_url
+                      ? <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
+                      : <Sparkles size={24} className="text-muted-foreground/30" />}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
                       <Badge variant={s.variant} className="gap-1"><s.icon size={10} />{s.label}</Badge>
                       <span className="text-xs font-bold uppercase">{item.title}</span>
                     </div>
-                    <p className="text-sm font-medium mb-0.5">Generado con {item.model}</p>
-                    <p className="text-xs text-muted-foreground line-clamp-2 mb-1.5">{item.desc}</p>
+                    <p className="text-sm font-medium mb-0.5">Generado con {modelLabel[item.ai_model] ?? item.ai_model}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-2 mb-1.5">{item.prompt}</p>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><Clock size={10} />{item.date}</span>
-                      {item.platforms > 0 && <span>{item.platforms} redes</span>}
+                      <span className="flex items-center gap-1"><Clock size={10} />{formatDate(item.created_at)}</span>
+                      {item.targets.length > 0 && <span>{item.targets.length} redes</span>}
                     </div>
                   </div>
                   <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="icon" className="h-8 w-8"><Eye size={14} /></Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8"><Edit3 size={14} /></Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8"><Trash2 size={14} /></Button>
+                    {item.image_url && (
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => window.open(item.image_url!, "_blank")}><Eye size={14} /></Button>
+                    )}
+                    <Button
+                      variant="ghost" size="icon" className="h-8 w-8 text-destructive"
+                      onClick={() => handleDelete(item.id)}
+                      disabled={deleting === item.id}
+                    >
+                      {deleting === item.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical size={14} /></Button>
                   </div>
                 </div>
@@ -100,20 +182,27 @@ export default function MediaPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {items.map((item) => {
-            const s = statusConfig[item.status];
+          {paginated.map((item) => {
+            const s = statusConfig[item.status] ?? statusConfig.draft;
             return (
               <div key={item.id} className="rounded-md border bg-card overflow-hidden hover:shadow-sm transition-shadow cursor-pointer group">
-                <div className="aspect-square bg-muted flex items-center justify-center relative">
-                  <Sparkles size={32} className="text-muted-foreground/30" />
+                <div className="aspect-square bg-muted flex items-center justify-center relative overflow-hidden">
+                  {item.image_url
+                    ? <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
+                    : <Sparkles size={32} className="text-muted-foreground/30" />}
                   <Badge variant={s.variant} className="absolute top-2 left-2 gap-1"><s.icon size={10} />{s.label}</Badge>
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button variant="ghost" size="icon" className="h-7 w-7 bg-background/80" onClick={() => handleDelete(item.id)} disabled={deleting === item.id}>
+                      {deleting === item.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} className="text-destructive" />}
+                    </Button>
+                  </div>
                 </div>
                 <div className="p-3">
                   <p className="text-xs font-bold uppercase mb-1">{item.title}</p>
-                  <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{item.desc}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{item.prompt}</p>
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1"><Clock size={10} />{item.date}</span>
-                    <span>{item.model}</span>
+                    <span className="flex items-center gap-1"><Clock size={10} />{formatDate(item.created_at)}</span>
+                    <span>{modelLabel[item.ai_model] ?? item.ai_model}</span>
                   </div>
                 </div>
               </div>
@@ -122,24 +211,18 @@ export default function MediaPage() {
         </div>
       )}
 
-      {/* New item link */}
-      <div className="rounded-md border border-dashed p-4 flex items-center justify-center gap-3 hover:border-primary/30 cursor-pointer group">
-        <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-          <Plus size={16} />
+      {!loading && filtered.length > 0 && (
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} de {filtered.length}</span>
+          <div className="flex gap-1">
+            <Button variant="ghost" size="icon" className="h-7 w-7" disabled={page === 1} onClick={() => setPage(page - 1)}><ChevronLeft size={14} /></Button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+              <Button key={n} variant={n === page ? "default" : "ghost"} size="icon" className="h-7 w-7 text-xs" onClick={() => setPage(n)}>{n}</Button>
+            ))}
+            <Button variant="ghost" size="icon" className="h-7 w-7" disabled={page === totalPages} onClick={() => setPage(page + 1)}><ChevronRight size={14} /></Button>
+          </div>
         </div>
-        <p className="text-sm font-medium group-hover:text-primary transition-colors">Crear Nueva Publicación</p>
-      </div>
-
-      {/* Pagination */}
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>1-5 de 24</span>
-        <div className="flex gap-1">
-          <Button variant="ghost" size="icon" className="h-7 w-7" disabled><ChevronLeft size={14} /></Button>
-          <Button variant="default" size="icon" className="h-7 w-7 text-xs">1</Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-xs">2</Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7"><ChevronRight size={14} /></Button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

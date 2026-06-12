@@ -4,7 +4,7 @@ from sqlalchemy import select
 from uuid import UUID
 
 from app.db.database import get_db
-from app.models.user import User, Publication, GenerationLog, PublishLog
+from app.models.user import User, Publication, GenerationLog
 from app.models.schemas import (
     PublicationCreate,
     PublicationUpdate,
@@ -13,9 +13,9 @@ from app.models.schemas import (
     PublicationStatus,
     GenerateRequest,
     GenerateResponse,
+    ImageCallbackPayload,
 )
 from app.dependencies import get_current_user
-from app.services.ai_services import GeminiService, OpenAIService, OpenRouterService
 from app.services.n8n_service import trigger_image_generation_workflow
 
 router = APIRouter(prefix="/api/publications", tags=["publications"])
@@ -121,6 +121,38 @@ async def delete_publication(
     if not publication:
         raise HTTPException(status_code=404, detail="Publicación no encontrada")
     await db.delete(publication)
+
+
+@router.post("/{publication_id}/image-ready")
+async def image_ready_callback(
+    publication_id: UUID,
+    payload: ImageCallbackPayload,
+    db: AsyncSession = Depends(get_db),
+):
+    """Llamado por n8n cuando termina la generación de imagen."""
+    result = await db.execute(select(Publication).where(Publication.id == publication_id))
+    pub = result.scalar_one_or_none()
+    if not pub:
+        raise HTTPException(status_code=404, detail="Publicación no encontrada")
+
+    if payload.error_message:
+        pub.status = PublicationStatus.FAILED
+    else:
+        pub.image_url = payload.image_url
+        pub.status = PublicationStatus.GENERATED
+
+    log = GenerationLog(
+        publication_id=pub.id,
+        ai_model=pub.ai_model,
+        prompt=pub.prompt,
+        image_url=payload.image_url,
+        duration_ms=payload.duration_ms,
+        cost_usd=payload.cost_usd,
+        error_message=payload.error_message,
+    )
+    db.add(log)
+    await db.flush()
+    return {"ok": True}
 
 
 @router.post("/generate", response_model=GenerateResponse)

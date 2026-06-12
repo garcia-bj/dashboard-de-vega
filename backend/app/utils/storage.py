@@ -54,12 +54,16 @@ class S3Storage(StorageBackend):
         self,
         bucket: str,
         endpoint: str = "",
+        public_url: str = "",
         region: str = "us-east-1",
         access_key: str = "",
         secret_key: str = "",
     ):
         self.bucket = bucket
         self.endpoint = endpoint
+        # public_url is what browsers use to fetch the file directly.
+        # Falls back to endpoint if not set (works when RustFS is on localhost).
+        self.public_url = public_url or endpoint
         self.region = region
         self.access_key = access_key
         self.secret_key = secret_key
@@ -68,6 +72,7 @@ class S3Storage(StorageBackend):
     async def _get_client(self):
         if self._client is None:
             import aioboto3
+            from botocore.config import Config as BotoConfig
 
             session = aioboto3.Session()
             self._client = await session.client(
@@ -76,12 +81,18 @@ class S3Storage(StorageBackend):
                 region_name=self.region,
                 aws_access_key_id=self.access_key,
                 aws_secret_access_key=self.secret_key,
+                config=BotoConfig(signature_version="s3v4"),
             ).__aenter__()
         return self._client
 
     async def upload(self, data: bytes, path: str, content_type: str = "image/png") -> str:
         client = await self._get_client()
-        await client.put_object(Bucket=self.bucket, Key=path, Body=data, ContentType=content_type)
+        await client.put_object(
+            Bucket=self.bucket,
+            Key=path,
+            Body=data,
+            ContentType=content_type,
+        )
         return self.get_url(path)
 
     async def delete(self, path: str) -> None:
@@ -89,8 +100,8 @@ class S3Storage(StorageBackend):
         await client.delete_object(Bucket=self.bucket, Key=path)
 
     def get_url(self, path: str) -> str:
-        if self.endpoint:
-            return f"{self.endpoint}/{self.bucket}/{path}"
+        if self.public_url:
+            return f"{self.public_url}/{self.bucket}/{path}"
         return f"https://{self.bucket}.s3.{self.region}.amazonaws.com/{path}"
 
     async def exists(self, path: str) -> bool:
@@ -107,6 +118,7 @@ def get_storage() -> StorageBackend:
         return S3Storage(
             bucket=settings.STORAGE_S3_BUCKET,
             endpoint=settings.STORAGE_S3_ENDPOINT,
+            public_url=settings.STORAGE_S3_PUBLIC_URL,
             region=settings.STORAGE_S3_REGION,
             access_key=settings.STORAGE_S3_ACCESS_KEY,
             secret_key=settings.STORAGE_S3_SECRET_KEY,

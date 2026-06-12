@@ -16,6 +16,10 @@ out/
 !.env.example
 !backend/.env.example
 !frontend/.env.local.example
+!.env.prod
+!.env.infra
+!.env.backend
+!.env.frontend
 
 # ──── IDE ────
 .vscode/

@@ -1,0 +1,50 @@
+# ============================================================
+#  De Vega — Compose #1: Infraestructura (PostgreSQL + Redis)
+#  Dokploy: crea una "Application" tipo "Compose" con este archivo
+#  El .env es el mismo para los 3 stacks (copiado de .env.prod)
+# ============================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: devega-postgres
+    restart: unless-stopped
+    env_file:
+      - .env.infra
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - devega
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: devega-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - devega
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  redisdata:
+
+networks:
+  devega:
+    name: devega
+    driver: bridge

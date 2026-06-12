@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useSettingsStore } from "@/store/settings";
+import { useAuthStore } from "@/store/auth";
+import { api } from "@/lib/api";
 import {
   Sparkles, Wand2, ImageIcon, CalendarDays, Share2, Download,
   RefreshCw, ChevronDown, X, CheckCircle2, AlertCircle,
@@ -23,7 +25,6 @@ const models = [
 ];
 
 const styles = ["Cinematográfico", "Minimalista", "Nocturno", "Cálido", "Gourmet", "Editorial", "Vintage", "Neón"];
-const WEBHOOK = "https://asc-n8n.autosalescloser.com/webhook/img_asd";
 
 export default function GeneratePage() {
   const { logo, referenceImage } = useSettingsStore();
@@ -40,21 +41,19 @@ export default function GeneratePage() {
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return toast.error("Escribe un prompt");
+    const token = useAuthStore.getState().token || localStorage.getItem("token");
+    if (!token) { toast.error("Sesión expirada — vuelve a iniciar sesión"); return; }
     setGenerating(true); setResult(null); setError("");
     const body: Record<string, string> = { prompt: prompt.trim(), model: model.id };
     if (selStyles.length) body.style = selStyles.join(", ");
     if (size) body.size = size;
     if (negPrompt.trim()) body.negative_prompt = negPrompt.trim();
-    if (logo) body.logo = logo;
-    if (referenceImage) body.reference_image = referenceImage;
     try {
-      const res = await fetch(WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const url = data.image_url || data.url || data.output || data.result?.image || data.data?.url;
+      const data = await api.publish.generate(body, token);
+      const url = data.image_url;
       if (url?.startsWith("http")) { setResult(url); toast.success("Imagen generada"); }
-      else { setError("Sin URL en respuesta"); toast.warning("Respuesta inesperada"); }
-    } catch (e) { setError(e instanceof Error ? e.message : "Error"); toast.error("Error"); }
+      else { setError("Sin URL en respuesta"); toast.warning("Respuesta inesperada del servidor"); }
+    } catch (e) { setError(e instanceof Error ? e.message : "Error"); toast.error("Error al generar"); }
     finally { setGenerating(false); }
   };
 
@@ -159,7 +158,7 @@ export default function GeneratePage() {
                 ) : error ? (
                   <motion.div key="err" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-2"><AlertCircle size={40} className="text-destructive/40" /><p className="text-sm text-destructive text-center px-4">{error}</p></motion.div>
                 ) : (
-                  <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-2"><ImageIcon size={40} className="text-muted-foreground/30" /><p className="text-sm text-muted-foreground">La imagen aparecerá aquí</p><p className="text-xs text-muted-foreground/50">Webhook: {WEBHOOK}</p></motion.div>
+                  <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-2"><ImageIcon size={40} className="text-muted-foreground/30" /><p className="text-sm text-muted-foreground">La imagen aparecerá aquí</p></motion.div>
                 )}
               </AnimatePresence>
             </div>

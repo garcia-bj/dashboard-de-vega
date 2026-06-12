@@ -132,3 +132,10 @@ class PublishRequest(BaseModel):
     targets: list[PublishTarget] | None = None
     image_url: str | None = None
     caption: str | None = None
+
+
+class ImageCallbackPayload(BaseModel):
+    image_url: str | None = None
+    duration_ms: int | None = None
+    cost_usd: float | None = None
+    error_message: str | None = None
