@@ -37,6 +37,9 @@ class Settings(BaseSettings):
 
     CORS_ORIGINS: str = "http://localhost:3000"
 
+    ADMIN_EMAIL: str = ""
+    ADMIN_PASSWORD: str = ""
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
