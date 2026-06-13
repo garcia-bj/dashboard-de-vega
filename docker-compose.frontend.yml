@@ -11,7 +11,7 @@ services:
         # Se hornea en el bundle de JS. El navegador del usuario debe alcanzar esta URL.
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     env_file:
-      - .env.frontend
+      - .env
     container_name: devega-frontend
     restart: unless-stopped
     ports:
