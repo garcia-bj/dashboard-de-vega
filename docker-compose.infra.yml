@@ -9,8 +9,6 @@ services:
     image: postgres:16-alpine
     container_name: devega-postgres
     restart: unless-stopped
-    env_file:
-      - .env.infra
     ports:
       - "5432:5432"
     volumes:
