@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Wand2, Calendar, ImageIcon, Settings,
   Bell, PanelLeftClose, PanelLeftOpen,
-  Sparkles, User, LogOut, LifeBuoy, Menu, Search,
+  User, LogOut, LifeBuoy, Menu, Search,
 } from "lucide-react";
 
 const navItems = [
@@ -92,14 +92,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       )}>
         {collapsed && !mobile ? (
           <button onClick={() => setCollapsed(false)} className="p-2 rounded-lg hover:bg-white/10 transition-colors" title="Expandir">
-            <Sparkles size={20} className="text-sidebar-accent" />
+            <img src="/logo.png" alt="De Vega" className="w-5 h-5 object-contain" />
           </button>
         ) : (
           <div className="flex items-center justify-between w-full">
             <Link href="/dashboard" className="flex items-center gap-2.5" onClick={() => setMobileOpen(false)}>
-              <div className="w-7 h-7 rounded-md bg-sidebar-accent/20 flex items-center justify-center">
-                <Sparkles size={15} className="text-sidebar-accent" />
-              </div>
+              <img src="/logo.png" alt="De Vega" className="w-7 h-7 object-contain" />
               <span className="text-[15px] font-bold text-white tracking-tight">De Vega</span>
             </Link>
             {!mobile && (

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, Mail, Lock, Sparkles, ArrowRight, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
 
@@ -47,10 +47,7 @@ export default function LoginPage() {
 
         {/* Content */}
         <div className="relative z-10 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)))" }}>
-            <Sparkles size={18} className="text-white" />
-          </div>
+          <img src="/logo.png" alt="De Vega" className="w-9 h-9 object-contain" />
           <span className="text-xl font-bold text-white tracking-tight">De Vega</span>
         </div>
 
@@ -90,10 +87,7 @@ export default function LoginPage() {
         <div className="w-full max-w-[380px] space-y-8">
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)))" }}>
-              <Sparkles size={16} className="text-white" />
-            </div>
+            <img src="/logo.png" alt="De Vega" className="w-8 h-8 object-contain" />
             <span className="text-lg font-bold text-foreground tracking-tight">De Vega</span>
           </div>
 

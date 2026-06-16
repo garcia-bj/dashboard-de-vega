@@ -4,6 +4,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "De Vega | Generador de Imágenes IA",
   description: "Genera imágenes con IA y autopublícalas en Meta",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
