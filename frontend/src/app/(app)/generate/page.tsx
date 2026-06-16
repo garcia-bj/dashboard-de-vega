@@ -19,10 +19,20 @@ import {
 } from "lucide-react";
 
 const models = [
-  { id: "gemini",              name: "Imagen 3",          provider: "Google Gemini", sizes: ["1024x1024", "1024x1792", "1792x1024"] },
-  { id: "openai_dalle",        name: "DALL·E 3",          provider: "OpenAI",        sizes: ["1024x1024", "1024x1792", "1792x1024"] },
-  { id: "openrouter_flux",     name: "Flux 1.1 Pro",      provider: "OpenRouter",    sizes: ["1024x1024", "1024x1536", "1536x1024"] },
-  { id: "openrouter_sd",       name: "Stable Diffusion XL", provider: "OpenRouter", sizes: ["1024x1024", "896x1152",  "1152x896"]  },
+  {
+    id: "openai_dalle",
+    name: "DALL·E 3",
+    provider: "OpenAI",
+    sizes: ["256x256", "512x512", "1024x1024", "1024x1536 (Portrait)", "1536x1024 (Landscape)", "Auto"],
+    showSize: true,
+  },
+  {
+    id: "openrouter_flux",
+    name: "Flux 1.1 Pro",
+    provider: "OpenRouter",
+    sizes: [] as string[],
+    showSize: false,
+  },
 ];
 
 const styles = ["Cinematográfico", "Minimalista", "Nocturno", "Cálido", "Gourmet", "Editorial", "Vintage", "Neón"];
@@ -32,7 +42,7 @@ export default function GeneratePage() {
   const [model, setModel] = useState(models[0]);
   const [prompt, setPrompt] = useState("");
   const [negPrompt, setNegPrompt] = useState("");
-  const [size, setSize] = useState(models[0].sizes[0]);
+  const [size, setSize] = useState(models[0].sizes[2]);
   const [selStyles, setSelStyles] = useState<string[]>([]);
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -45,7 +55,7 @@ export default function GeneratePage() {
     setGenerating(true); setResult(null); setError("");
     const body: Record<string, string> = { prompt: prompt.trim(), model: model.id };
     if (selStyles.length) body.style = selStyles.join(", ");
-    if (size) body.size = size;
+    if (model.showSize && size) body.size = size.split(" ")[0];
     if (negPrompt.trim()) body.negative_prompt = negPrompt.trim();
     try {
       const data = await api.publish.generate(body, token);
@@ -89,7 +99,7 @@ export default function GeneratePage() {
               value={model.id}
               onValueChange={(v) => {
                 const m = models.find((x) => x.id === v)!;
-                setModel(m); setSize(m.sizes[0]);
+                setModel(m); setSize(m.sizes[2] ?? m.sizes[0] ?? "");
               }}
             >
               <SelectTrigger className="bg-muted border-border rounded-xl h-11">
@@ -137,22 +147,24 @@ export default function GeneratePage() {
 
           {/* Size + Styles */}
           <div className={card + " space-y-4"}>
-            <div>
-              <label className={fieldLabel}>Tamaño</label>
-              <Select value={size} onValueChange={setSize}>
-                <SelectTrigger className="bg-muted border-border rounded-xl h-11">
-                  <div className="flex items-center gap-2">
-                    <SlidersHorizontal size={13} className="flex-shrink-0 text-muted-foreground" />
-                    <span className="text-sm">{size}</span>
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  {model.sizes.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {model.showSize && (
+              <div>
+                <label className={fieldLabel}>Tamaño</label>
+                <Select value={size} onValueChange={setSize}>
+                  <SelectTrigger className="bg-muted border-border rounded-xl h-11">
+                    <div className="flex items-center gap-2">
+                      <SlidersHorizontal size={13} className="flex-shrink-0 text-muted-foreground" />
+                      <span className="text-sm">{size}</span>
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {model.sizes.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
               <label className={fieldLabel}>Estilo Visual</label>
               <div className="flex flex-wrap gap-1.5">
