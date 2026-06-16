@@ -29,7 +29,7 @@ const modelLabel: Record<string, string> = {
 const providerIcon: Record<string, typeof Facebook> = { facebook: Facebook, instagram: Instagram };
 
 const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.07 } } };
-const item = { hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } } };
+const item = { hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } } };
 
 function formatScheduled(iso: string) {
   const d = new Date(iso);
