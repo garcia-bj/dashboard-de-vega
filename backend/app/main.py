@@ -16,9 +16,22 @@ async def _seed_admin() -> None:
     from app.models.user import User
     from app.dependencies import hash_password
     async with async_session() as db:
+        # Si ya existe con ese email, actualiza la contraseña por si cambió
         result = await db.execute(select(User).where(User.email == settings.ADMIN_EMAIL))
-        if result.scalar_one_or_none():
+        user = result.scalar_one_or_none()
+        if user:
+            user.hashed_password = hash_password(settings.ADMIN_PASSWORD)
+            await db.commit()
             return
+        # Existe un admin con otro email (ej. placeholder) → actualiza email y contraseña
+        result = await db.execute(select(User).limit(1))
+        user = result.scalar_one_or_none()
+        if user:
+            user.email = settings.ADMIN_EMAIL
+            user.hashed_password = hash_password(settings.ADMIN_PASSWORD)
+            await db.commit()
+            return
+        # Sin usuarios → crea el admin
         db.add(User(
             email=settings.ADMIN_EMAIL,
             hashed_password=hash_password(settings.ADMIN_PASSWORD),
