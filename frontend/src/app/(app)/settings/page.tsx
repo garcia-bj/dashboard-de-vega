@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -15,7 +15,7 @@ import {
   Facebook, Instagram, Eye, EyeOff, Key, Save, RotateCcw, ImagePlus, Trash2, Loader2,
 } from "lucide-react";
 
-const item = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } } };
+const item: Variants = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } } };
 
 export default function SettingsPage() {
   const { logo, referenceImage, setLogo, setReferenceImage } = useSettingsStore();
