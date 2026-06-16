@@ -11,8 +11,6 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
@@ -28,8 +26,6 @@ services:
     container_name: devega-redis
     restart: unless-stopped
     command: redis-server --appendonly yes
-    ports:
-      - "6379:6379"
     volumes:
       - redisdata:/data
     networks:
