@@ -8,7 +8,7 @@ import { Toaster } from "sonner";
 import { useAuthStore } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Wand2, Calendar, ImageIcon, Settings,
@@ -178,11 +178,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <header className="sticky top-0 z-30 h-14 border-b bg-background/70 backdrop-blur-2xl flex items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-3">
             {/* Mobile menu trigger */}
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="lg:hidden">
-                <Menu size={20} />
-              </Button>
-            </SheetTrigger>
+            <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileOpen(true)}>
+              <Menu size={20} />
+            </Button>
             {collapsed && (
               <button onClick={() => setCollapsed(false)} className="hidden lg:flex p-1.5 rounded hover:bg-accent">
                 <PanelLeftOpen size={18} />
