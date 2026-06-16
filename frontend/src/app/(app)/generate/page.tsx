@@ -12,8 +12,11 @@ import { useSettingsStore } from "@/store/settings";
 import { useAuthStore } from "@/store/auth";
 import { api } from "@/lib/api";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger,
+} from "@/components/ui/select";
+import {
   Sparkles, Wand2, ImageIcon, CalendarDays, Share2, Download,
-  RefreshCw, ChevronDown, X, CheckCircle2, AlertCircle,
+  RefreshCw, X, CheckCircle2, AlertCircle,
   SlidersHorizontal, Eye, Loader2, Settings, Clock,
 } from "lucide-react";
 
@@ -29,11 +32,9 @@ const styles = ["Cinematográfico", "Minimalista", "Nocturno", "Cálido", "Gourm
 export default function GeneratePage() {
   const { logo, referenceImage } = useSettingsStore();
   const [model, setModel] = useState(models[0]);
-  const [modelOpen, setModelOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [negPrompt, setNegPrompt] = useState("");
   const [size, setSize] = useState(models[0].sizes[0]);
-  const [sizeOpen, setSizeOpen] = useState(false);
   const [selStyles, setSelStyles] = useState<string[]>([]);
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -70,21 +71,30 @@ export default function GeneratePage() {
           {/* Model */}
           <div className="rounded-md border bg-card p-4">
             <label className="text-xs font-semibold mb-2 block">Modelo IA</label>
-            <div className="relative">
-              <button onClick={() => setModelOpen(!modelOpen)} className="w-full h-10 rounded-md border px-3 flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2"><Sparkles size={16} className="text-secondary" /><span className="font-medium">{model.name}</span><span className="text-muted-foreground text-xs">{model.provider}</span></div>
-                <ChevronDown size={14} className={cn("transition-transform", modelOpen && "rotate-180")} />
-              </button>
-              <AnimatePresence>{modelOpen && (
-                <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className="absolute top-full left-0 right-0 mt-1 rounded-md border bg-popover shadow-md z-20 overflow-hidden">
-                  {models.map((m) => (
-                    <button key={m.id} onClick={() => { setModel(m); setSize(m.sizes[0]); setModelOpen(false); }} className={cn("w-full text-left p-3 hover:bg-accent text-sm", m.id === model.id && "bg-accent")}>
-                      <p className="font-medium">{m.name}</p><p className="text-xs text-muted-foreground">{m.provider}</p>
-                    </button>
-                  ))}
-                </motion.div>
-              )}</AnimatePresence>
-            </div>
+            <Select
+              value={model.id}
+              onValueChange={(v) => {
+                const m = models.find((x) => x.id === v)!;
+                setModel(m);
+                setSize(m.sizes[0]);
+              }}
+            >
+              <SelectTrigger>
+                <div className="flex items-center gap-2">
+                  <Sparkles size={16} className="text-secondary flex-shrink-0" />
+                  <span className="font-medium">{model.name}</span>
+                  <span className="text-muted-foreground text-xs">{model.provider}</span>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                {models.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    <span className="font-medium">{m.name}</span>
+                    <span className="text-xs text-muted-foreground ml-2">{m.provider}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Prompt */}
@@ -102,17 +112,19 @@ export default function GeneratePage() {
           <div className="rounded-md border bg-card p-4 space-y-4">
             <div>
               <label className="text-xs font-semibold mb-2 block">Tamaño</label>
-              <div className="relative">
-                <button onClick={() => setSizeOpen(!sizeOpen)} className="w-full h-10 rounded-md border px-3 flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2"><SlidersHorizontal size={14} />{size}</span>
-                  <ChevronDown size={14} className={cn("transition-transform", sizeOpen && "rotate-180")} />
-                </button>
-                <AnimatePresence>{sizeOpen && (
-                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className="absolute top-full left-0 right-0 mt-1 rounded-md border bg-popover shadow-md z-20 overflow-hidden">
-                    {model.sizes.map((s) => <button key={s} onClick={() => { setSize(s); setSizeOpen(false); }} className={cn("w-full text-left px-3 py-2 text-sm hover:bg-accent", s === size && "bg-accent font-medium")}>{s}</button>)}
-                  </motion.div>
-                )}</AnimatePresence>
-              </div>
+              <Select value={size} onValueChange={setSize}>
+                <SelectTrigger>
+                  <div className="flex items-center gap-2">
+                    <SlidersHorizontal size={14} className="flex-shrink-0" />
+                    <span>{size}</span>
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  {model.sizes.map((s) => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="text-xs font-semibold mb-2 block">Estilo Visual</label>
