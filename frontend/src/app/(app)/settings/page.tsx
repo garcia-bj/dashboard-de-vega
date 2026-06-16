@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +15,8 @@ import {
   Facebook, Instagram, Eye, EyeOff, Key, Save, RotateCcw, ImagePlus, Trash2, Loader2,
 } from "lucide-react";
 
+const item = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } } };
+
 export default function SettingsPage() {
   const { logo, referenceImage, setLogo, setReferenceImage } = useSettingsStore();
   const token = useAuthStore((s) => s.token) || (typeof window !== "undefined" ? localStorage.getItem("token") : null);
@@ -24,22 +25,14 @@ export default function SettingsPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  // Profile
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-
-  // API Keys (write-only — never show existing value)
   const [gemini, setGemini] = useState(""); const [showG, setShowG] = useState(false);
   const [openai, setOpenai] = useState(""); const [showO, setShowO] = useState(false);
   const [openrouter, setOpenrouter] = useState(""); const [showR, setShowR] = useState(false);
-
-  // API key configured flags from server
   const [geminiOk, setGeminiOk] = useState(false);
   const [openaiOk, setOpenaiOk] = useState(false);
   const [openrouterOk, setOpenrouterOk] = useState(false);
-
-  // Notifications (local UI state only)
   const [autoGen, setAutoGen] = useState(true);
   const [genImg, setGenImg] = useState(true);
   const [sysAlerts, setSysAlerts] = useState(true);
@@ -54,16 +47,11 @@ export default function SettingsPage() {
       setGeminiOk(s.gemini_configured);
       setOpenaiOk(s.openai_configured);
       setOpenrouterOk(s.openrouter_configured);
-      // Sync logo/ref to Zustand store if not already in localStorage
       if (s.logo && !logo) setLogo(s.logo);
       if (s.reference_image && !referenceImage) setReferenceImage(s.reference_image);
     }).catch(() => toast.error("No se pudo cargar la configuración")).finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
-
-  const toB64 = (f: File): Promise<string> => new Promise((resolve, reject) => {
-    const r = new FileReader(); r.onload = () => resolve(r.result as string); r.onerror = reject; r.readAsDataURL(f);
-  });
 
   const handleLogoUpload = async (file: File) => {
     if (!token) return;
@@ -93,12 +81,10 @@ export default function SettingsPage() {
       if (gemini) payload.gemini_api_key = gemini;
       if (openai) payload.openai_api_key = openai;
       if (openrouter) payload.openrouter_api_key = openrouter;
-
       const updated = await api.settings.update(payload, token);
       setGeminiOk(updated.gemini_configured);
       setOpenaiOk(updated.openai_configured);
       setOpenrouterOk(updated.openrouter_configured);
-      // Clear key inputs after save
       setGemini(""); setOpenai(""); setOpenrouter("");
       toast.success("Configuración guardada");
     } catch (e) {
@@ -106,149 +92,268 @@ export default function SettingsPage() {
     } finally { setSaving(false); }
   };
 
-  const section = "rounded-md border bg-card p-4 md:p-6";
-  const heading = "flex items-center gap-3 mb-4 pb-4 border-b";
-  const labelClass = "text-xs font-semibold mb-1.5 block";
+  const card = "rounded-2xl border border-border bg-card p-5 md:p-6";
+  const sectionHeader = "flex items-center gap-3 mb-5 pb-4 border-b border-border";
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 size={28} className="animate-spin text-muted-foreground" />
+        <Loader2 size={24} className="animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+    <motion.div initial="hidden" animate="show" variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06 } } }} className="space-y-5 max-w-4xl">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <motion.h2 initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} className="text-2xl font-semibold">Configuración</motion.h2>
-          <p className="text-sm text-muted-foreground">API keys, logo y conexiones</p>
+          <h2 className="text-xl font-bold text-foreground">Configuración</h2>
+          <p className="text-xs text-muted-foreground">API keys, logo y conexiones</p>
         </div>
-        <Button onClick={handleSave} disabled={saving} className="gap-2">
+        <button onClick={handleSave} disabled={saving}
+          className="h-9 px-4 rounded-xl text-sm font-semibold text-white flex items-center gap-2 disabled:opacity-50 transition-all"
+          style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(342 62% 36%))" }}>
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
           Guardar Cambios
-        </Button>
+        </button>
       </div>
 
       {/* Perfil */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className={section}>
-        <div className={heading}><Store size={18} className="text-primary" /><h3 className="font-semibold">Perfil & Assets</h3></div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div><Label className={labelClass}>Nombre</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div><Label className={labelClass}>Email</Label><Input type="email" value={email} disabled className="opacity-60" /></div>
-          <div>
-            <Label className={labelClass}>Logo <span className="text-secondary">*usado en IA</span></Label>
-            <input ref={logoRef} type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); }} className="hidden" />
-            {logo ? (
-              <div className="border rounded-md p-3 flex items-center gap-3">
-                <img src={logo} className="w-12 h-12 rounded object-contain bg-muted" alt="logo" />
-                <div className="flex-1 min-w-0"><p className="text-sm font-medium">Logo cargado</p><p className="text-xs text-muted-foreground">Base64 listo</p></div>
-                <Button variant="ghost" size="icon" onClick={() => { setLogo(null); }} className="text-destructive"><Trash2 size={14} /></Button>
-              </div>
-            ) : (
-              <button onClick={() => logoRef.current?.click()} className="w-full border-2 border-dashed rounded-md p-6 flex flex-col items-center gap-2 hover:border-primary/30 hover:bg-accent/50 transition-all text-sm text-muted-foreground"><Upload size={22} />Subir logo (PNG/JPG, 5MB)</button>
-            )}
+      <motion.div variants={item} className={card}>
+        <div className={sectionHeader}>
+          <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Store size={16} className="text-primary" />
           </div>
           <div>
-            <Label className={labelClass}>Imagen Ref <span className="text-secondary">*guía visual</span></Label>
-            <input ref={refRef} type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleRefUpload(f); }} className="hidden" />
-            {referenceImage ? (
-              <div className="border rounded-md p-3 flex items-center gap-3">
-                <img src={referenceImage} className="w-12 h-12 rounded object-cover bg-muted" alt="ref" />
-                <div className="flex-1 min-w-0"><p className="text-sm font-medium">Referencia cargada</p><p className="text-xs text-muted-foreground">Se envía como guía</p></div>
-                <Button variant="ghost" size="icon" onClick={() => setReferenceImage(null)} className="text-destructive"><Trash2 size={14} /></Button>
+            <h3 className="text-sm font-semibold text-foreground">Perfil & Assets</h3>
+            <p className="text-xs text-muted-foreground">Logo y datos del negocio</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Label className="text-xs font-semibold text-foreground/70 mb-1.5 block">Nombre</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} className="bg-muted border-border rounded-xl h-10" />
+          </div>
+          <div>
+            <Label className="text-xs font-semibold text-foreground/70 mb-1.5 block">Email</Label>
+            <Input type="email" value={email} disabled className="bg-muted border-border rounded-xl h-10 opacity-50" />
+          </div>
+
+          {/* Logo */}
+          <div>
+            <Label className="text-xs font-semibold text-foreground/70 mb-1.5 block">
+              Logo <span className="text-secondary">*IA lo usa</span>
+            </Label>
+            <input ref={logoRef} type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); }} className="hidden" />
+            {logo ? (
+              <div className="border border-border rounded-xl p-3 flex items-center gap-3 bg-muted/40">
+                <img src={logo} className="w-11 h-11 rounded-lg object-contain bg-muted" alt="logo" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">Logo cargado</p>
+                  <p className="text-xs text-muted-foreground">Listo para IA</p>
+                </div>
+                <button onClick={() => setLogo(null)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors">
+                  <Trash2 size={14} />
+                </button>
               </div>
             ) : (
-              <button onClick={() => refRef.current?.click()} className="w-full border-2 border-dashed rounded-md p-6 flex flex-col items-center gap-2 hover:border-primary/30 hover:bg-accent/50 transition-all text-sm text-muted-foreground"><ImagePlus size={22} />Subir referencia (5MB)</button>
+              <button onClick={() => logoRef.current?.click()}
+                className="w-full border-2 border-dashed border-border rounded-xl p-5 flex flex-col items-center gap-2 hover:border-primary/40 hover:bg-primary/5 transition-all text-muted-foreground">
+                <Upload size={20} />
+                <span className="text-xs">Subir logo (PNG/JPG, 5MB)</span>
+              </button>
+            )}
+          </div>
+
+          {/* Referencia */}
+          <div>
+            <Label className="text-xs font-semibold text-foreground/70 mb-1.5 block">
+              Imagen Ref <span className="text-secondary">*guía visual</span>
+            </Label>
+            <input ref={refRef} type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleRefUpload(f); }} className="hidden" />
+            {referenceImage ? (
+              <div className="border border-border rounded-xl p-3 flex items-center gap-3 bg-muted/40">
+                <img src={referenceImage} className="w-11 h-11 rounded-lg object-cover bg-muted" alt="ref" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">Referencia cargada</p>
+                  <p className="text-xs text-muted-foreground">Se envía como guía</p>
+                </div>
+                <button onClick={() => setReferenceImage(null)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => refRef.current?.click()}
+                className="w-full border-2 border-dashed border-border rounded-xl p-5 flex flex-col items-center gap-2 hover:border-primary/40 hover:bg-primary/5 transition-all text-muted-foreground">
+                <ImagePlus size={20} />
+                <span className="text-xs">Subir referencia (5MB)</span>
+              </button>
             )}
           </div>
         </div>
       </motion.div>
 
-      {/* IA */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className={section}>
-        <div className={heading}><Sparkles size={18} className="text-secondary" /><h3 className="font-semibold">APIs de IA</h3></div>
-        {([
-          ["Gemini API Key", gemini, setGemini, showG, setShowG, "AIza...", geminiOk] as const,
-          ["OpenAI API Key", openai, setOpenai, showO, setShowO, "sk-...", openaiOk] as const,
-          ["OpenRouter API Key", openrouter, setOpenrouter, showR, setShowR, "sk-or-...", openrouterOk] as const,
-        ]).map(([l, v, set, show, setShow, ph, configured]) => (
-          <div key={l as string} className="mb-3">
-            <div className="flex items-center gap-2 mb-1.5">
-              <Label className="text-xs font-semibold">{l}</Label>
-              {(configured as boolean) && !v && <Badge variant="success" className="text-xs">Configurada</Badge>}
-            </div>
-            <div className="relative">
-              <Key size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type={(show as boolean) ? "text" : "password"}
-                value={v as string}
-                onChange={(e) => (set as (v: string) => void)(e.target.value)}
-                placeholder={(configured as boolean) ? "••••••••• (dejar vacío para no cambiar)" : ph as string}
-                className="pl-9 pr-9"
-              />
-              <button onClick={() => (setShow as (v: boolean) => void)(!(show as boolean))} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                {(show as boolean) ? <EyeOff size={14} /> : <Eye size={14} />}
-              </button>
-            </div>
+      {/* APIs de IA */}
+      <motion.div variants={item} className={card}>
+        <div className={sectionHeader}>
+          <div className="w-8 h-8 rounded-xl bg-secondary/10 flex items-center justify-center">
+            <Sparkles size={16} className="text-secondary" />
           </div>
-        ))}
-        <div className="pt-3 border-t space-y-3">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">APIs de IA</h3>
+            <p className="text-xs text-muted-foreground">Claves para generación de imágenes</p>
+          </div>
+        </div>
+
+        <div className="space-y-3 mb-4">
           {([
-            ["Autogenerar Publicaciones" as const, "Sugerencias diarias" as const, autoGen, setAutoGen as (v: boolean) => void] as const,
-            ["Generar Imágenes" as const, "Visuales premium IA" as const, genImg, setGenImg as (v: boolean) => void] as const,
+            ["Gemini API Key",      gemini,      setGemini,      showG, setShowG, "AIza...",     geminiOk]     as const,
+            ["OpenAI API Key",      openai,      setOpenai,      showO, setShowO, "sk-...",       openaiOk]     as const,
+            ["OpenRouter API Key",  openrouter,  setOpenrouter,  showR, setShowR, "sk-or-...",   openrouterOk] as const,
+          ]).map(([l, v, set, show, setShow, ph, configured]) => (
+            <div key={l as string}>
+              <div className="flex items-center gap-2 mb-1.5">
+                <Label className="text-xs font-semibold text-foreground/70">{l as string}</Label>
+                {(configured as boolean) && !(v as string) && (
+                  <Badge variant="success" className="text-xs">Configurada</Badge>
+                )}
+              </div>
+              <div className="relative">
+                <Key size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type={(show as boolean) ? "text" : "password"}
+                  value={v as string}
+                  onChange={(e) => (set as (v: string) => void)(e.target.value)}
+                  placeholder={(configured as boolean) ? "•••••••• (dejar vacío para mantener)" : ph as string}
+                  className="pl-9 pr-9 bg-muted border-border rounded-xl h-10"
+                />
+                <button onClick={() => (setShow as (v: boolean) => void)(!(show as boolean))}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                  {(show as boolean) ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="pt-4 border-t border-border space-y-3">
+          {([
+            ["Autogenerar Publicaciones" as const, "Sugerencias diarias de IA" as const, autoGen, setAutoGen as (v: boolean) => void] as const,
+            ["Generar Imágenes" as const,          "Imágenes premium con IA" as const,   genImg,  setGenImg  as (v: boolean) => void] as const,
           ]).map(([t, d, v, set]) => (
-            <div key={t} className="flex items-center justify-between"><div><p className="text-sm font-medium">{t}</p><p className="text-xs text-muted-foreground">{d}</p></div><Switch checked={v as boolean} onCheckedChange={set} /></div>
+            <div key={t} className="flex items-center justify-between py-1">
+              <div>
+                <p className="text-sm font-medium text-foreground">{t}</p>
+                <p className="text-xs text-muted-foreground">{d}</p>
+              </div>
+              <Switch checked={v as boolean} onCheckedChange={set} />
+            </div>
           ))}
         </div>
       </motion.div>
 
-      {/* Redes */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className={section}>
-        <div className={heading}><Share2 size={18} className="text-primary" /><h3 className="font-semibold">Redes Sociales</h3></div>
-        <div className="space-y-3">
+      {/* Redes Sociales */}
+      <motion.div variants={item} className={card}>
+        <div className={sectionHeader}>
+          <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Share2 size={16} className="text-primary" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Redes Sociales</h3>
+            <p className="text-xs text-muted-foreground">Conecta tus cuentas de Meta</p>
+          </div>
+        </div>
+        <div className="space-y-2">
           {[
-            { name: "Facebook", icon: Facebook },
-            { name: "Instagram", icon: Instagram },
-            { name: "Stories", icon: Instagram },
+            { name: "Facebook", icon: Facebook, color: "text-blue-400", bg: "bg-blue-500/10" },
+            { name: "Instagram", icon: Instagram, color: "text-pink-400", bg: "bg-pink-500/10" },
+            { name: "Stories", icon: Instagram, color: "text-amber-400", bg: "bg-amber-500/10" },
           ].map((a) => (
-            <div key={a.name} className="flex items-center justify-between p-3 rounded-md bg-muted/50">
-              <div className="flex items-center gap-3"><a.icon size={18} className="text-primary" /><div><p className="text-sm font-semibold">{a.name}</p><p className="text-xs text-muted-foreground">No conectado</p></div></div>
-              <Button variant="default" size="sm">Conectar</Button>
+            <div key={a.name} className="flex items-center justify-between p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors">
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-xl ${a.bg} flex items-center justify-center`}>
+                  <a.icon size={17} className={a.color} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{a.name}</p>
+                  <p className="text-xs text-muted-foreground">No conectado</p>
+                </div>
+              </div>
+              <button className="h-8 px-3 rounded-xl text-xs font-semibold text-white"
+                style={{ background: "hsl(var(--primary))" }}>
+                Conectar
+              </button>
             </div>
           ))}
         </div>
       </motion.div>
 
       {/* Notificaciones */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className={section}>
-        <div className={heading}><Bell size={18} className="text-secondary" /><h3 className="font-semibold">Notificaciones</h3></div>
+      <motion.div variants={item} className={card}>
+        <div className={sectionHeader}>
+          <div className="w-8 h-8 rounded-xl bg-secondary/10 flex items-center justify-center">
+            <Bell size={16} className="text-secondary" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Notificaciones</h3>
+            <p className="text-xs text-muted-foreground">Preferencias de alertas</p>
+          </div>
+        </div>
         <div className="space-y-3">
           {([
-            ["Alertas del Sistema" as const, sysAlerts, setSysAlerts as (v: boolean) => void] as const,
-            ["Reportes Diarios" as const, daily, setDaily as (v: boolean) => void] as const,
-            ["Confirmación de Posts" as const, confirm, setConfirm as (v: boolean) => void] as const,
+            ["Alertas del Sistema"   as const, sysAlerts, setSysAlerts as (v: boolean) => void] as const,
+            ["Reportes Diarios"      as const, daily,     setDaily     as (v: boolean) => void] as const,
+            ["Confirmación de Posts" as const, confirm,   setConfirm   as (v: boolean) => void] as const,
           ]).map(([t, v, set]) => (
-            <div key={t} className="flex items-center justify-between"><p className="text-sm">{t}</p><Switch checked={v as boolean} onCheckedChange={set} /></div>
+            <div key={t} className="flex items-center justify-between py-1">
+              <p className="text-sm text-foreground">{t}</p>
+              <Switch checked={v as boolean} onCheckedChange={set} />
+            </div>
           ))}
         </div>
       </motion.div>
 
       {/* Seguridad */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className={section}>
-        <div className={heading}><Shield size={18} /><h3 className="font-semibold">Seguridad</h3></div>
-        <button className="w-full flex items-center justify-between p-3 rounded-md hover:bg-muted/50 transition-colors"><div className="flex items-center gap-3"><RotateCcw size={18} /><span className="text-sm">Cambiar Contraseña</span></div><ChevronRight size={18} /></button>
-        <button className="w-full flex items-center justify-between p-3 rounded-md hover:bg-muted/50 transition-colors"><div className="flex items-center gap-3"><Shield size={18} /><span className="text-sm">Autenticación 2FA</span><Badge variant="ghost">Desactivado</Badge></div><ChevronRight size={18} /></button>
+      <motion.div variants={item} className={card}>
+        <div className={sectionHeader}>
+          <div className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center">
+            <Shield size={16} className="text-muted-foreground" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Seguridad</h3>
+            <p className="text-xs text-muted-foreground">Contraseña y autenticación</p>
+          </div>
+        </div>
+        <div className="space-y-1">
+          {[
+            { label: "Cambiar Contraseña", icon: RotateCcw, badge: null },
+            { label: "Autenticación 2FA",  icon: Shield,    badge: "Desactivado" },
+          ].map((r) => (
+            <button key={r.label}
+              className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-muted transition-colors text-foreground">
+              <div className="flex items-center gap-3">
+                <r.icon size={16} className="text-muted-foreground" />
+                <span className="text-sm">{r.label}</span>
+                {r.badge && <Badge variant="ghost" className="text-xs">{r.badge}</Badge>}
+              </div>
+              <ChevronRight size={16} className="text-muted-foreground" />
+            </button>
+          ))}
+        </div>
       </motion.div>
 
-      <div className="flex justify-end gap-3">
-        <Button variant="ghost" onClick={() => { setGemini(""); setOpenai(""); setOpenrouter(""); toast("Descartado"); }} className="gap-2"><RotateCcw size={14} />Descartar</Button>
-        <Button onClick={handleSave} disabled={saving} className="gap-2">
+      <div className="flex justify-end gap-3 pb-4">
+        <button onClick={() => { setGemini(""); setOpenai(""); setOpenrouter(""); toast("Descartado"); }}
+          className="h-9 px-4 rounded-xl border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex items-center gap-2">
+          <RotateCcw size={14} /> Descartar
+        </button>
+        <button onClick={handleSave} disabled={saving}
+          className="h-9 px-4 rounded-xl text-sm font-semibold text-white flex items-center gap-2 disabled:opacity-50"
+          style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(342 62% 36%))" }}>
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-          Guardar Configuración
-        </Button>
+          Guardar
+        </button>
       </div>
-    </div>
+    </motion.div>
   );
 }

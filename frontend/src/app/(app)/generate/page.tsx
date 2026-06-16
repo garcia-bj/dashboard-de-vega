@@ -4,8 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useSettingsStore } from "@/store/settings";
@@ -21,10 +19,10 @@ import {
 } from "lucide-react";
 
 const models = [
-  { id: "gemini", name: "Imagen 3", provider: "Google Gemini", sizes: ["1024x1024", "1024x1792", "1792x1024"] },
-  { id: "openai_dalle", name: "DALL·E 3", provider: "OpenAI", sizes: ["1024x1024", "1024x1792", "1792x1024"] },
-  { id: "openrouter_flux", name: "Flux 1.1 Pro", provider: "OpenRouter", sizes: ["1024x1024", "1024x1536", "1536x1024"] },
-  { id: "openrouter_sd", name: "Stable Diffusion XL", provider: "OpenRouter", sizes: ["1024x1024", "896x1152", "1152x896"] },
+  { id: "gemini",              name: "Imagen 3",          provider: "Google Gemini", sizes: ["1024x1024", "1024x1792", "1792x1024"] },
+  { id: "openai_dalle",        name: "DALL·E 3",          provider: "OpenAI",        sizes: ["1024x1024", "1024x1792", "1792x1024"] },
+  { id: "openrouter_flux",     name: "Flux 1.1 Pro",      provider: "OpenRouter",    sizes: ["1024x1024", "1024x1536", "1536x1024"] },
+  { id: "openrouter_sd",       name: "Stable Diffusion XL", provider: "OpenRouter", sizes: ["1024x1024", "896x1152",  "1152x896"]  },
 ];
 
 const styles = ["Cinematográfico", "Minimalista", "Nocturno", "Cálido", "Gourmet", "Editorial", "Vintage", "Neón"];
@@ -43,7 +41,7 @@ export default function GeneratePage() {
   const handleGenerate = async () => {
     if (!prompt.trim()) return toast.error("Escribe un prompt");
     const token = useAuthStore.getState().token || localStorage.getItem("token");
-    if (!token) { toast.error("Sesión expirada — vuelve a iniciar sesión"); return; }
+    if (!token) { toast.error("Sesión expirada"); return; }
     setGenerating(true); setResult(null); setError("");
     const body: Record<string, string> = { prompt: prompt.trim(), model: model.id };
     if (selStyles.length) body.style = selStyles.join(", ");
@@ -53,43 +51,58 @@ export default function GeneratePage() {
       const data = await api.publish.generate(body, token);
       const url = data.image_url;
       if (url?.startsWith("http")) { setResult(url); toast.success("Imagen generada"); }
-      else { setError("Sin URL en respuesta"); toast.warning("Respuesta inesperada del servidor"); }
-    } catch (e) { setError(e instanceof Error ? e.message : "Error"); toast.error("Error al generar"); }
-    finally { setGenerating(false); }
+      else { setError("Sin URL en respuesta"); toast.warning("Respuesta inesperada"); }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error");
+      toast.error("Error al generar");
+    } finally {
+      setGenerating(false);
+    }
   };
 
+  const card = "rounded-2xl border border-border bg-card p-5";
+  const fieldLabel = "text-xs font-semibold text-foreground/70 mb-2 block";
+
   return (
-    <div className="space-y-6 max-w-7xl">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-        <div><h2 className="text-2xl font-semibold">Generar Imagen</h2><p className="text-sm text-muted-foreground">Crea con IA, tu logo y estilo</p></div>
-        {!logo && <Link href="/settings"><Button variant="outline" size="sm" className="gap-2"><Settings size={14} /> Configurar logo</Button></Link>}
+    <div className="space-y-5 max-w-7xl">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div>
+          <h2 className="text-xl font-bold text-foreground">Generar Imagen</h2>
+          <p className="text-xs text-muted-foreground">Crea con IA, tu logo y estilo</p>
+        </div>
+        {!logo && (
+          <Link href="/settings">
+            <button className="h-8 px-3 rounded-xl border border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex items-center gap-1.5">
+              <Settings size={13} /> Configurar logo
+            </button>
+          </Link>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Config */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Config panel */}
         <div className="lg:col-span-5 space-y-4">
           {/* Model */}
-          <div className="rounded-md border bg-card p-4">
-            <label className="text-xs font-semibold mb-2 block">Modelo IA</label>
+          <div className={card}>
+            <label className={fieldLabel}>Modelo IA</label>
             <Select
               value={model.id}
               onValueChange={(v) => {
                 const m = models.find((x) => x.id === v)!;
-                setModel(m);
-                setSize(m.sizes[0]);
+                setModel(m); setSize(m.sizes[0]);
               }}
             >
-              <SelectTrigger>
+              <SelectTrigger className="bg-muted border-border rounded-xl h-11">
                 <div className="flex items-center gap-2">
-                  <Sparkles size={16} className="text-secondary flex-shrink-0" />
-                  <span className="font-medium">{model.name}</span>
+                  <Sparkles size={15} className="text-secondary flex-shrink-0" />
+                  <span className="font-semibold text-sm">{model.name}</span>
                   <span className="text-muted-foreground text-xs">{model.provider}</span>
                 </div>
               </SelectTrigger>
               <SelectContent>
                 {models.map((m) => (
                   <SelectItem key={m.id} value={m.id}>
-                    <span className="font-medium">{m.name}</span>
+                    <span className="font-semibold">{m.name}</span>
                     <span className="text-xs text-muted-foreground ml-2">{m.provider}</span>
                   </SelectItem>
                 ))}
@@ -98,25 +111,39 @@ export default function GeneratePage() {
           </div>
 
           {/* Prompt */}
-          <div className="rounded-md border bg-card p-4">
+          <div className={card}>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold">Prompt</label>
-              <button onClick={() => setPrompt("")} className="text-xs text-muted-foreground hover:text-destructive"><X size={12} /> Limpiar</button>
+              <label className={fieldLabel}>Prompt</label>
+              <button onClick={() => setPrompt("")} className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors">
+                <X size={11} /> Limpiar
+              </button>
             </div>
-            <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={4} placeholder="Describe la imagen: composición, iluminación, estilo..." />
-            <label className="text-xs font-semibold mt-3 mb-1 block">Prompt Negativo</label>
-            <Textarea value={negPrompt} onChange={(e) => setNegPrompt(e.target.value)} rows={2} placeholder="Elementos a excluir..." />
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              rows={4}
+              placeholder="Describe la imagen: composición, iluminación, estilo, colores..."
+              className="w-full rounded-xl border border-border bg-muted px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+            />
+            <label className="text-xs font-semibold text-foreground/70 mt-3 mb-2 block">Prompt Negativo</label>
+            <textarea
+              value={negPrompt}
+              onChange={(e) => setNegPrompt(e.target.value)}
+              rows={2}
+              placeholder="Elementos a excluir..."
+              className="w-full rounded-xl border border-border bg-muted px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+            />
           </div>
 
           {/* Size + Styles */}
-          <div className="rounded-md border bg-card p-4 space-y-4">
+          <div className={card + " space-y-4"}>
             <div>
-              <label className="text-xs font-semibold mb-2 block">Tamaño</label>
+              <label className={fieldLabel}>Tamaño</label>
               <Select value={size} onValueChange={setSize}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-muted border-border rounded-xl h-11">
                   <div className="flex items-center gap-2">
-                    <SlidersHorizontal size={14} className="flex-shrink-0" />
-                    <span>{size}</span>
+                    <SlidersHorizontal size={13} className="flex-shrink-0 text-muted-foreground" />
+                    <span className="text-sm">{size}</span>
                   </div>
                 </SelectTrigger>
                 <SelectContent>
@@ -127,69 +154,114 @@ export default function GeneratePage() {
               </Select>
             </div>
             <div>
-              <label className="text-xs font-semibold mb-2 block">Estilo Visual</label>
+              <label className={fieldLabel}>Estilo Visual</label>
               <div className="flex flex-wrap gap-1.5">
                 {styles.map((s) => (
-                  <Badge key={s} variant={selStyles.includes(s) ? "default" : "outline"} className="cursor-pointer" onClick={() => setSelStyles((p) => p.includes(s) ? p.filter((x) => x !== s) : [...p, s])}>{s}</Badge>
+                  <button
+                    key={s}
+                    onClick={() => setSelStyles((p) => p.includes(s) ? p.filter((x) => x !== s) : [...p, s])}
+                    className={cn(
+                      "px-2.5 py-1 rounded-full text-xs font-medium border transition-all",
+                      selStyles.includes(s)
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                    )}
+                  >{s}</button>
                 ))}
               </div>
             </div>
           </div>
 
           {(logo || referenceImage) && (
-            <div className="rounded-md border bg-card p-3 flex items-center gap-2 text-sm text-muted-foreground">
-              <CheckCircle2 size={16} className="text-green-600" />
-              {logo && "Logo "}{logo && referenceImage && "+ "}{referenceImage && "Referencia "}incluidos
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 flex items-center gap-2 text-sm text-emerald-400">
+              <CheckCircle2 size={15} />
+              {logo && "Logo"}{logo && referenceImage && " + "}{referenceImage && "Referencia"} incluidos
             </div>
           )}
 
           <div className="flex gap-3">
-            <Button variant="ghost" onClick={() => { setPrompt(""); setNegPrompt(""); setSelStyles([]); setResult(null); }}><RefreshCw size={14} /> Reiniciar</Button>
-            <Button className="flex-1 gap-2" onClick={handleGenerate} disabled={generating || !prompt.trim()}>
-              {generating ? <><Loader2 size={16} className="animate-spin" /> Generando...</> : <><Wand2 size={16} /> Generar Imagen</>}
-            </Button>
+            <button
+              onClick={() => { setPrompt(""); setNegPrompt(""); setSelStyles([]); setResult(null); }}
+              className="h-10 px-4 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex items-center gap-2"
+            >
+              <RefreshCw size={14} /> Reiniciar
+            </button>
+            <button
+              onClick={handleGenerate}
+              disabled={generating || !prompt.trim()}
+              className="flex-1 h-10 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(342 62% 36%))" }}
+            >
+              {generating
+                ? <><Loader2 size={15} className="animate-spin" /> Generando...</>
+                : <><Wand2 size={15} /> Generar Imagen</>}
+            </button>
           </div>
         </div>
 
         {/* Preview */}
         <div className="lg:col-span-7 space-y-4">
-          <div className="rounded-md border bg-card p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold flex items-center gap-2"><Eye size={18} className="text-primary" /> Vista Previa</h3>
-              {result && <Badge variant="success" className="gap-1"><CheckCircle2 size={12} /> Generado</Badge>}
+          <div className={card}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-semibold flex items-center gap-2 text-foreground">
+                <Eye size={17} className="text-primary" /> Vista Previa
+              </h3>
+              {result && <Badge variant="success" className="gap-1"><CheckCircle2 size={10} />Generado</Badge>}
             </div>
-            <div className="aspect-square rounded-md bg-muted flex items-center justify-center overflow-hidden">
+            <div className="aspect-square rounded-2xl bg-muted border border-border flex items-center justify-center overflow-hidden">
               <AnimatePresence mode="wait">
                 {generating ? (
-                  <motion.div key="load" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center gap-3">
-                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }} className="w-16 h-16 rounded-full border-4 border-muted-foreground/20 border-t-primary" />
-                    <p className="text-sm">Generando con {model.provider}...</p>
+                  <motion.div key="load" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center gap-4">
+                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.4, ease: "linear" }}
+                      className="w-14 h-14 rounded-full border-[3px] border-border border-t-primary" />
+                    <p className="text-sm text-muted-foreground">Generando con {model.provider}...</p>
                   </motion.div>
                 ) : result ? (
-                  <motion.img key="img" src={result} alt="Generated" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full h-full object-cover" />
+                  <motion.img key="img" src={result} alt="Generated"
+                    initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
+                    className="w-full h-full object-cover" />
                 ) : error ? (
-                  <motion.div key="err" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-2"><AlertCircle size={40} className="text-destructive/40" /><p className="text-sm text-destructive text-center px-4">{error}</p></motion.div>
+                  <motion.div key="err" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-2 px-6 text-center">
+                    <AlertCircle size={36} className="text-destructive/40" />
+                    <p className="text-sm text-destructive">{error}</p>
+                  </motion.div>
                 ) : (
-                  <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-2"><ImageIcon size={40} className="text-muted-foreground/30" /><p className="text-sm text-muted-foreground">La imagen aparecerá aquí</p></motion.div>
+                  <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-2">
+                    <ImageIcon size={36} className="text-muted-foreground/20" />
+                    <p className="text-sm text-muted-foreground">La imagen aparecerá aquí</p>
+                  </motion.div>
                 )}
               </AnimatePresence>
             </div>
             {result && (
-              <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
-                <Button variant="outline" size="sm" className="gap-1 flex-1"><Download size={14} />Descargar</Button>
-                <Link href="/schedule"><Button variant="outline" size="sm" className="gap-1 flex-1"><CalendarDays size={14} />Programar</Button></Link>
-                <Button size="sm" className="gap-1 flex-1"><Share2 size={14} />Publicar</Button>
+              <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-border">
+                <button className="flex-1 h-9 rounded-xl border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex items-center justify-center gap-1.5">
+                  <Download size={14} /> Descargar
+                </button>
+                <Link href="/schedule" className="flex-1">
+                  <button className="w-full h-9 rounded-xl border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex items-center justify-center gap-1.5">
+                    <CalendarDays size={14} /> Programar
+                  </button>
+                </Link>
+                <button className="flex-1 h-9 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-1.5"
+                  style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(342 62% 36%))" }}>
+                  <Share2 size={14} /> Publicar
+                </button>
               </div>
             )}
           </div>
 
-          <div className="rounded-md border bg-card p-4">
+          <div className={card}>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold flex items-center gap-2"><Clock size={16} /> Recientes</h3>
-              <Link href="/media"><Button variant="link" size="sm">Ver galería</Button></Link>
+              <h3 className="text-base font-semibold flex items-center gap-2 text-foreground">
+                <Clock size={16} className="text-muted-foreground" /> Recientes
+              </h3>
+              <Link href="/media">
+                <span className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer">Ver galería →</span>
+              </Link>
             </div>
-            <div className="flex items-center gap-3 p-3 rounded-md bg-muted/50 text-sm text-muted-foreground">
-              <ImageIcon size={18} /> Sin generaciones aún — crea tu primera imagen
+            <div className="rounded-xl border border-dashed border-border p-6 flex items-center gap-3 text-sm text-muted-foreground justify-center">
+              <ImageIcon size={16} className="opacity-40" /> Sin generaciones — crea tu primera imagen
             </div>
           </div>
         </div>

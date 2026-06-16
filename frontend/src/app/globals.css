@@ -2,34 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
 
 @layer base {
   :root {
-    --background: 240 33% 99%;
-    --foreground: 217 26% 12%;
-    --card: 0 0% 100%;
-    --card-foreground: 217 26% 12%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 217 26% 12%;
-    --primary: 342 60% 33%;
+    --background: 224 44% 7%;
+    --foreground: 210 18% 93%;
+    --card: 224 38% 10%;
+    --card-foreground: 210 18% 93%;
+    --popover: 224 36% 12%;
+    --popover-foreground: 210 18% 93%;
+    --primary: 342 62% 44%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 25 95% 53%;
+    --secondary: 25 95% 55%;
     --secondary-foreground: 0 0% 100%;
-    --muted: 240 20% 95%;
-    --muted-foreground: 345 8% 35%;
-    --accent: 342 60% 95%;
-    --accent-foreground: 342 60% 33%;
-    --destructive: 0 84% 42%;
+    --muted: 224 32% 13%;
+    --muted-foreground: 224 14% 52%;
+    --accent: 224 30% 16%;
+    --accent-foreground: 210 18% 93%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 345 7% 82%;
-    --input: 345 7% 82%;
-    --ring: 342 60% 33%;
-    --radius: 0.375rem;
-    --sidebar: 217 33% 11%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-muted: 220 14% 60%;
-    --sidebar-accent: 25 95% 53%;
+    --border: 224 26% 18%;
+    --input: 224 26% 18%;
+    --ring: 342 62% 44%;
+    --radius: 0.5rem;
+    --sidebar: 224 55% 5%;
+    --sidebar-foreground: 210 16% 88%;
+    --sidebar-muted: 224 14% 44%;
+    --sidebar-accent: 25 95% 55%;
   }
 
   * {
@@ -38,7 +38,14 @@
 
   body {
     font-family: "Inter", system-ui, -apple-system, sans-serif;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.018em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     @apply bg-background text-foreground;
   }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
 }
