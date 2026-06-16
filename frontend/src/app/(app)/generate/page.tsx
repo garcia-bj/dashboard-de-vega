@@ -191,11 +191,21 @@ export default function GeneratePage() {
             </div>
           </div>
 
-          {(logo || referenceImage) && (
+          {logo ? (
             <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 flex items-center gap-2 text-sm text-emerald-400">
               <CheckCircle2 size={15} />
-              {logo && "Logo"}{logo && referenceImage && " + "}{referenceImage && "Referencia"} incluidos
+              Logo incluido{referenceImage && " + Referencia"}
             </div>
+          ) : (
+            <Link href="/settings" className="block">
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/8 px-4 py-3 flex items-center gap-2 text-sm text-amber-400 hover:bg-amber-500/15 transition-colors cursor-pointer">
+                <AlertCircle size={15} className="flex-shrink-0" />
+                <span>
+                  <span className="font-semibold">Logo requerido</span> — subí tu logo en Configuración para poder generar
+                </span>
+                <Settings size={13} className="ml-auto flex-shrink-0" />
+              </div>
+            </Link>
           )}
 
           <div className="flex gap-3">
@@ -207,7 +217,7 @@ export default function GeneratePage() {
             </button>
             <button
               onClick={handleGenerate}
-              disabled={generating || !prompt.trim()}
+              disabled={generating || !prompt.trim() || !logo}
               className="flex-1 h-10 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(342 62% 36%))" }}
             >
