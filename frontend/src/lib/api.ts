@@ -9,9 +9,16 @@ interface RequestOptions {
 async function request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const { method = "GET", body, token } = options;
 
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
+  const headers: Record<string, string> = {};
+  let requestBody: any = undefined;
+
+  if (body instanceof URLSearchParams) {
+    headers["Content-Type"] = "application/x-www-form-urlencoded";
+    requestBody = body.toString();
+  } else if (body) {
+    headers["Content-Type"] = "application/json";
+    requestBody = JSON.stringify(body);
+  }
 
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
@@ -20,7 +27,7 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
   const res = await fetch(`${API_BASE}${endpoint}`, {
     method,
     headers,
-    body: body ? JSON.stringify(body) : undefined,
+    body: requestBody,
   });
 
   if (!res.ok) {
