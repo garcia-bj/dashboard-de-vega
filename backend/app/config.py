@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     META_APP_ID: str = ""
     META_APP_SECRET: str = ""
     META_REDIRECT_URI: str = ""
+    FRONTEND_URL: str = "http://localhost:3000"
 
     REDIS_URL: str = "redis://redis:6379/0"
 

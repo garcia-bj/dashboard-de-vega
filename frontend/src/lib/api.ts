@@ -132,8 +132,8 @@ export const api = {
       request<SocialAccountOut>("/api/social/accounts", { method: "POST", body: data, token }),
     disconnectAccount: (id: string, token: string) =>
       request<void>(`/api/social/accounts/${id}`, { method: "DELETE", token }),
-    metaCallback: (code: string) =>
-      request<unknown>(`/api/social/meta/callback?code=${code}`),
+    getAuthorizeUrl: (token: string) =>
+      request<{ url: string }>("/api/social/meta/authorize", { token }),
   },
 
   settings: {

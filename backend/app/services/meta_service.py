@@ -92,6 +92,20 @@ class MetaService:
             "permalink": f"https://www.instagram.com/stories/direct/{publish.get('id')}",
         }
 
+    async def exchange_code_for_token(self, code: str) -> dict:
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.get(
+                f"{self.GRAPH_URL}/oauth/access_token",
+                params={
+                    "client_id": settings.META_APP_ID,
+                    "client_secret": settings.META_APP_SECRET,
+                    "redirect_uri": settings.META_REDIRECT_URI,
+                    "code": code,
+                },
+            )
+            response.raise_for_status()
+            return response.json()
+
     async def exchange_token(self, short_lived_token: str) -> dict:
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.get(

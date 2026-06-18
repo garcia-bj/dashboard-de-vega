@@ -9,10 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { useSettingsStore } from "@/store/settings";
 import { useAuthStore } from "@/store/auth";
-import { api, type SettingsOut } from "@/lib/api";
+import { api, type SettingsOut, type SocialAccountOut } from "@/lib/api";
 import {
   Store, Sparkles, Share2, Bell, Shield, ChevronRight, Upload,
   Facebook, Instagram, Eye, EyeOff, Key, Save, RotateCcw, ImagePlus, Trash2, Loader2,
+  CheckCircle2, X,
 } from "lucide-react";
 
 const item: Variants = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } } };
@@ -38,18 +39,36 @@ export default function SettingsPage() {
   const [sysAlerts, setSysAlerts] = useState(true);
   const [daily, setDaily] = useState(false);
   const [confirm, setConfirm] = useState(true);
+  const [socialAccounts, setSocialAccounts] = useState<SocialAccountOut[]>([]);
+  const [disconnecting, setDisconnecting] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) return;
-    api.settings.get(token).then((s: SettingsOut) => {
-      setName(s.full_name || "");
-      setEmail(s.email);
-      setGeminiOk(s.gemini_configured);
-      setOpenaiOk(s.openai_configured);
-      setOpenrouterOk(s.openrouter_configured);
-      if (s.logo && !logo) setLogo(s.logo);
-      if (s.reference_image && !referenceImage) setReferenceImage(s.reference_image);
-    }).catch(() => toast.error("No se pudo cargar la configuración")).finally(() => setLoading(false));
+
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get("connected");
+    if (connected === "success") {
+      toast.success("Meta conectado correctamente");
+      window.history.replaceState({}, "", "/settings");
+    } else if (connected === "error") {
+      const msg = params.get("msg") || "error";
+      toast.error(`Error al conectar Meta: ${msg}`);
+      window.history.replaceState({}, "", "/settings");
+    }
+
+    Promise.all([api.settings.get(token), api.social.listAccounts(token)])
+      .then(([s, accounts]) => {
+        setName(s.full_name || "");
+        setEmail(s.email);
+        setGeminiOk(s.gemini_configured);
+        setOpenaiOk(s.openai_configured);
+        setOpenrouterOk(s.openrouter_configured);
+        if (s.logo && !logo) setLogo(s.logo);
+        if (s.reference_image && !referenceImage) setReferenceImage(s.reference_image);
+        setSocialAccounts(accounts);
+      })
+      .catch(() => toast.error("No se pudo cargar la configuración"))
+      .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
@@ -90,6 +109,30 @@ export default function SettingsPage() {
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Error al guardar");
     } finally { setSaving(false); }
+  };
+
+  const handleConnect = async () => {
+    if (!token) return;
+    try {
+      const { url } = await api.social.getAuthorizeUrl(token);
+      window.location.href = url;
+    } catch {
+      toast.error("No se pudo iniciar la conexión con Meta");
+    }
+  };
+
+  const handleDisconnect = async (id: string) => {
+    if (!token) return;
+    setDisconnecting(id);
+    try {
+      await api.social.disconnectAccount(id, token);
+      setSocialAccounts((prev) => prev.filter((a) => a.id !== id));
+      toast.success("Cuenta desconectada");
+    } catch {
+      toast.error("Error al desconectar");
+    } finally {
+      setDisconnecting(null);
+    }
   };
 
   const card = "rounded-2xl border border-border bg-card p-5 md:p-6";
@@ -264,25 +307,77 @@ export default function SettingsPage() {
           </div>
         </div>
         <div className="space-y-2">
-          {[
-            { name: "Facebook", icon: Facebook, color: "text-blue-400", bg: "bg-blue-500/10" },
-            { name: "Instagram", icon: Instagram, color: "text-pink-400", bg: "bg-pink-500/10" },
-            { name: "Stories", icon: Instagram, color: "text-amber-400", bg: "bg-amber-500/10" },
-          ].map((a) => (
-            <div key={a.name} className="flex items-center justify-between p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors">
+          {(() => {
+            const fbAccount = socialAccounts.find((a) => a.provider === "facebook");
+            const igAccount = socialAccounts.find((a) => a.provider === "instagram");
+            return [
+              {
+                key: "facebook",
+                name: "Facebook",
+                icon: Facebook,
+                color: "text-blue-400",
+                bg: "bg-blue-500/10",
+                account: fbAccount,
+                subtitle: fbAccount ? fbAccount.page_name : "No conectado",
+              },
+              {
+                key: "instagram",
+                name: "Instagram",
+                icon: Instagram,
+                color: "text-pink-400",
+                bg: "bg-pink-500/10",
+                account: igAccount,
+                subtitle: igAccount ? `@${igAccount.page_name}` : "No conectado",
+              },
+              {
+                key: "stories",
+                name: "Stories",
+                icon: Instagram,
+                color: "text-amber-400",
+                bg: "bg-amber-500/10",
+                account: igAccount,
+                subtitle: igAccount ? "Incluido con Instagram" : "Requiere Instagram",
+              },
+            ];
+          })().map((a) => (
+            <div key={a.key} className="flex items-center justify-between p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors">
               <div className="flex items-center gap-3">
                 <div className={`w-9 h-9 rounded-xl ${a.bg} flex items-center justify-center`}>
                   <a.icon size={17} className={a.color} />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-foreground">{a.name}</p>
-                  <p className="text-xs text-muted-foreground">No conectado</p>
+                  <p className={`text-xs ${a.account ? "text-emerald-400" : "text-muted-foreground"}`}>
+                    {a.subtitle}
+                  </p>
                 </div>
               </div>
-              <button className="h-8 px-3 rounded-xl text-xs font-semibold text-white"
-                style={{ background: "hsl(var(--primary))" }}>
-                Conectar
-              </button>
+              {a.key === "stories" ? (
+                a.account ? (
+                  <span className="flex items-center gap-1 text-xs text-emerald-400 font-medium">
+                    <CheckCircle2 size={13} /> Activo
+                  </span>
+                ) : null
+              ) : a.account ? (
+                <button
+                  onClick={() => handleDisconnect(a.account!.id)}
+                  disabled={disconnecting === a.account.id}
+                  className="h-8 px-3 rounded-xl text-xs font-medium border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors flex items-center gap-1.5"
+                >
+                  {disconnecting === a.account.id
+                    ? <Loader2 size={11} className="animate-spin" />
+                    : <X size={11} />}
+                  Desconectar
+                </button>
+              ) : (
+                <button
+                  onClick={handleConnect}
+                  className="h-8 px-3 rounded-xl text-xs font-semibold text-white"
+                  style={{ background: "hsl(var(--primary))" }}
+                >
+                  Conectar
+                </button>
+              )}
             </div>
           ))}
         </div>
