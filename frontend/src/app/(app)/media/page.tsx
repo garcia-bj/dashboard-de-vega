@@ -26,7 +26,7 @@ const statusConfig: Record<string, { label: string; variant: "success" | "warnin
 };
 
 const modelLabel: Record<string, string> = {
-  gemini: "Gemini", openai_dalle: "DALL·E 3", openrouter_flux: "Flux", openrouter_stable_diffusion: "SDXL",
+  gemini: "Gemini", openai: "IMAGE-2", openai_dalle: "IMAGE-2",
 };
 
 const dateRanges  = ["Últimos 7 días", "Últimos 30 días", "Últimos 90 días", "Todo"];

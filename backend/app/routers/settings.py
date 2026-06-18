@@ -16,7 +16,6 @@ class SettingsUpdate(BaseModel):
     reference_image_base64: str | None = None
     gemini_api_key: str | None = None
     openai_api_key: str | None = None
-    openrouter_api_key: str | None = None
 
 
 class SettingsOut(BaseModel):
@@ -28,7 +27,6 @@ class SettingsOut(BaseModel):
     has_reference_image: bool
     gemini_configured: bool
     openai_configured: bool
-    openrouter_configured: bool
 
 
 def _build_out(user: User) -> SettingsOut:
@@ -42,7 +40,6 @@ def _build_out(user: User) -> SettingsOut:
         has_reference_image="reference_image" in meta,
         gemini_configured=bool(meta.get("api_key_gemini")),
         openai_configured=bool(meta.get("api_key_openai")),
-        openrouter_configured=bool(meta.get("api_key_openrouter")),
     )
 
 
@@ -69,8 +66,6 @@ async def update_settings(
         meta["api_key_gemini"] = payload.gemini_api_key
     if payload.openai_api_key is not None:
         meta["api_key_openai"] = payload.openai_api_key
-    if payload.openrouter_api_key is not None:
-        meta["api_key_openrouter"] = payload.openrouter_api_key
 
     current_user.meta_data = meta
     await db.flush()

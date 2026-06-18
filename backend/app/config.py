@@ -27,7 +27,6 @@ class Settings(BaseSettings):
 
     GEMINI_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
-    OPENROUTER_API_KEY: str = ""
 
     META_APP_ID: str = ""
     META_APP_SECRET: str = ""

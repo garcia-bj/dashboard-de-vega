@@ -20,23 +20,16 @@ import {
 
 const models = [
   {
-    id: "openai_dalle",
+    id: "openai",
     name: "OpenAI",
-    provider: "DALL·E 3",
-    sizes: ["256x256", "512x512", "1024x1024", "1024x1536 (Portrait)", "1536x1024 (Landscape)", "Auto"],
+    provider: "IMAGE-2",
+    sizes: ["1024x1024", "1024x1536 (Portrait)", "1536x1024 (Landscape)", "Auto"],
     showSize: true,
   },
   {
     id: "gemini",
     name: "Gemini",
     provider: "Google Imagen 3",
-    sizes: [] as string[],
-    showSize: false,
-  },
-  {
-    id: "openrouter_flux",
-    name: "OpenRouter",
-    provider: "Flux 1.1 Pro",
     sizes: [] as string[],
     showSize: false,
   },

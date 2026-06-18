@@ -30,10 +30,8 @@ export default function SettingsPage() {
   const [email, setEmail] = useState("");
   const [gemini, setGemini] = useState(""); const [showG, setShowG] = useState(false);
   const [openai, setOpenai] = useState(""); const [showO, setShowO] = useState(false);
-  const [openrouter, setOpenrouter] = useState(""); const [showR, setShowR] = useState(false);
   const [geminiOk, setGeminiOk] = useState(false);
   const [openaiOk, setOpenaiOk] = useState(false);
-  const [openrouterOk, setOpenrouterOk] = useState(false);
   const [autoGen, setAutoGen] = useState(true);
   const [genImg, setGenImg] = useState(true);
   const [sysAlerts, setSysAlerts] = useState(true);
@@ -58,7 +56,6 @@ export default function SettingsPage() {
         setEmail(s.email);
         setGeminiOk(s.gemini_configured);
         setOpenaiOk(s.openai_configured);
-        setOpenrouterOk(s.openrouter_configured);
         if (s.logo && !logo) setLogo(s.logo);
         if (s.reference_image && !referenceImage) setReferenceImage(s.reference_image);
         setSocialAccounts(accounts);
@@ -99,12 +96,10 @@ export default function SettingsPage() {
       const payload: Record<string, string | null> = { full_name: name || null };
       if (gemini) payload.gemini_api_key = gemini;
       if (openai) payload.openai_api_key = openai;
-      if (openrouter) payload.openrouter_api_key = openrouter;
       const updated = await api.settings.update(payload, token);
       setGeminiOk(updated.gemini_configured);
       setOpenaiOk(updated.openai_configured);
-      setOpenrouterOk(updated.openrouter_configured);
-      setGemini(""); setOpenai(""); setOpenrouter("");
+      setGemini(""); setOpenai("");
       toast.success("Configuración guardada");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Error al guardar");
@@ -270,9 +265,8 @@ export default function SettingsPage() {
 
         <div className="space-y-3 mb-4">
           {([
-            ["Gemini API Key",      gemini,      setGemini,      showG, setShowG, "AIza...",     geminiOk]     as const,
-            ["OpenAI API Key",      openai,      setOpenai,      showO, setShowO, "sk-...",       openaiOk]     as const,
-            ["OpenRouter API Key",  openrouter,  setOpenrouter,  showR, setShowR, "sk-or-...",   openrouterOk] as const,
+            ["Gemini API Key",  gemini,  setGemini,  showG, setShowG, "AIza...",  geminiOk] as const,
+            ["OpenAI API Key",  openai,  setOpenai,  showO, setShowO, "sk-...",   openaiOk] as const,
           ]).map(([l, v, set, show, setShow, ph, configured]) => (
             <div key={l as string}>
               <div className="flex items-center gap-2 mb-1.5">
@@ -477,7 +471,7 @@ export default function SettingsPage() {
       </motion.div>
 
       <div className="flex justify-end gap-3 pb-4">
-        <button onClick={() => { setGemini(""); setOpenai(""); setOpenrouter(""); toast("Descartado"); }}
+        <button onClick={() => { setGemini(""); setOpenai(""); toast("Descartado"); }}
           className="h-9 px-4 rounded-xl border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex items-center gap-2">
           <RotateCcw size={14} /> Descartar
         </button>

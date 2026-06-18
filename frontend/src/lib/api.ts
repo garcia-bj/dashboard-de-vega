@@ -82,7 +82,6 @@ export interface SettingsOut {
   has_reference_image: boolean;
   gemini_configured: boolean;
   openai_configured: boolean;
-  openrouter_configured: boolean;
 }
 
 export interface GenerateResult {

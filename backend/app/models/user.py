@@ -55,9 +55,7 @@ class SocialAccount(Base):
 
 class AImodel(str, enum.Enum):
     GEMINI = "gemini"
-    OPENAI_DALLE = "openai_dalle"
-    OPENROUTER_FLUX = "openrouter_flux"
-    OPENROUTER_SD = "openrouter_stable_diffusion"
+    OPENAI = "openai"
 
 
 class PublicationStatus(str, enum.Enum):

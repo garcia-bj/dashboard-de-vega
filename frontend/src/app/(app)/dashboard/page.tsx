@@ -23,7 +23,7 @@ const statusMap: Record<string, { label: string; variant: "success" | "warning" 
 };
 
 const modelLabel: Record<string, string> = {
-  gemini: "Gemini", openai_dalle: "DALL·E 3", openrouter_flux: "Flux", openrouter_stable_diffusion: "SDXL",
+  gemini: "Gemini", openai: "IMAGE-2", openai_dalle: "IMAGE-2",
 };
 
 const providerIcon: Record<string, typeof Facebook> = { facebook: Facebook, instagram: Instagram };
