@@ -41,20 +41,16 @@ export default function SettingsPage() {
   const [confirm, setConfirm] = useState(true);
   const [socialAccounts, setSocialAccounts] = useState<SocialAccountOut[]>([]);
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
+  const [metaToken, setMetaToken] = useState("");
+  const [showMetaToken, setShowMetaToken] = useState(false);
+  const [fbPageId, setFbPageId] = useState("");
+  const [fbPageName, setFbPageName] = useState("");
+  const [igBusinessId, setIgBusinessId] = useState("");
+  const [igUsername, setIgUsername] = useState("");
+  const [savingMeta, setSavingMeta] = useState(false);
 
   useEffect(() => {
     if (!token) return;
-
-    const params = new URLSearchParams(window.location.search);
-    const connected = params.get("connected");
-    if (connected === "success") {
-      toast.success("Meta conectado correctamente");
-      window.history.replaceState({}, "", "/settings");
-    } else if (connected === "error") {
-      const msg = params.get("msg") || "error";
-      toast.error(`Error al conectar Meta: ${msg}`);
-      window.history.replaceState({}, "", "/settings");
-    }
 
     Promise.all([api.settings.get(token), api.social.listAccounts(token)])
       .then(([s, accounts]) => {
@@ -66,6 +62,10 @@ export default function SettingsPage() {
         if (s.logo && !logo) setLogo(s.logo);
         if (s.reference_image && !referenceImage) setReferenceImage(s.reference_image);
         setSocialAccounts(accounts);
+        const fb = accounts.find((a) => a.provider === "facebook");
+        const ig = accounts.find((a) => a.provider === "instagram");
+        if (fb) { setFbPageId(fb.page_id); setFbPageName(fb.page_name); }
+        if (ig) { setIgBusinessId(ig.instagram_business_id || ig.page_id); setIgUsername(ig.page_name); }
       })
       .catch(() => toast.error("No se pudo cargar la configuración"))
       .finally(() => setLoading(false));
@@ -111,13 +111,33 @@ export default function SettingsPage() {
     } finally { setSaving(false); }
   };
 
-  const handleConnect = async () => {
+  const handleSaveMeta = async () => {
     if (!token) return;
+    if (!metaToken || !fbPageId || !fbPageName) {
+      toast.error("Token, Page ID y nombre de página son requeridos");
+      return;
+    }
+    setSavingMeta(true);
     try {
-      const { url } = await api.social.getAuthorizeUrl(token);
-      window.location.href = url;
+      const fb = await api.social.connectAccount(
+        { provider: "facebook", page_id: fbPageId, page_name: fbPageName, access_token: metaToken },
+        token,
+      );
+      const updated: SocialAccountOut[] = [fb];
+      if (igBusinessId && igUsername) {
+        const ig = await api.social.connectAccount(
+          { provider: "instagram", page_id: igBusinessId, page_name: igUsername, access_token: metaToken, instagram_business_id: igBusinessId },
+          token,
+        );
+        updated.push(ig);
+      }
+      setSocialAccounts(updated);
+      setMetaToken("");
+      toast.success("Configuración de Meta guardada");
     } catch {
-      toast.error("No se pudo iniciar la conexión con Meta");
+      toast.error("Error al guardar la configuración de Meta");
+    } finally {
+      setSavingMeta(false);
     }
   };
 
@@ -303,83 +323,102 @@ export default function SettingsPage() {
           </div>
           <div>
             <h3 className="text-sm font-semibold text-foreground">Redes Sociales</h3>
-            <p className="text-xs text-muted-foreground">Conecta tus cuentas de Meta</p>
+            <p className="text-xs text-muted-foreground">Token permanente de Meta para autopublicar</p>
           </div>
         </div>
-        <div className="space-y-2">
+
+        {/* Estado actual */}
+        <div className="flex gap-2 mb-4 flex-wrap">
           {(() => {
-            const fbAccount = socialAccounts.find((a) => a.provider === "facebook");
-            const igAccount = socialAccounts.find((a) => a.provider === "instagram");
+            const fb = socialAccounts.find((a) => a.provider === "facebook");
+            const ig = socialAccounts.find((a) => a.provider === "instagram");
             return [
-              {
-                key: "facebook",
-                name: "Facebook",
-                icon: Facebook,
-                color: "text-blue-400",
-                bg: "bg-blue-500/10",
-                account: fbAccount,
-                subtitle: fbAccount ? fbAccount.page_name : "No conectado",
-              },
-              {
-                key: "instagram",
-                name: "Instagram",
-                icon: Instagram,
-                color: "text-pink-400",
-                bg: "bg-pink-500/10",
-                account: igAccount,
-                subtitle: igAccount ? `@${igAccount.page_name}` : "No conectado",
-              },
-              {
-                key: "stories",
-                name: "Stories",
-                icon: Instagram,
-                color: "text-amber-400",
-                bg: "bg-amber-500/10",
-                account: igAccount,
-                subtitle: igAccount ? "Incluido con Instagram" : "Requiere Instagram",
-              },
+              { key: "fb", icon: Facebook, color: "text-blue-400", bg: "bg-blue-500/10", account: fb, label: fb ? fb.page_name : "Facebook", connected: !!fb },
+              { key: "ig", icon: Instagram, color: "text-pink-400", bg: "bg-pink-500/10", account: ig, label: ig ? `@${ig.page_name}` : "Instagram", connected: !!ig },
+              { key: "st", icon: Instagram, color: "text-amber-400", bg: "bg-amber-500/10", account: ig, label: "Stories", connected: !!ig },
             ];
           })().map((a) => (
-            <div key={a.key} className="flex items-center justify-between p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors">
-              <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-xl ${a.bg} flex items-center justify-center`}>
-                  <a.icon size={17} className={a.color} />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{a.name}</p>
-                  <p className={`text-xs ${a.account ? "text-emerald-400" : "text-muted-foreground"}`}>
-                    {a.subtitle}
-                  </p>
-                </div>
+            <div key={a.key} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium ${a.connected ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-400" : "border-border bg-muted/40 text-muted-foreground"}`}>
+              <div className={`w-5 h-5 rounded-lg ${a.bg} flex items-center justify-center`}>
+                <a.icon size={11} className={a.color} />
               </div>
-              {a.key === "stories" ? (
-                a.account ? (
-                  <span className="flex items-center gap-1 text-xs text-emerald-400 font-medium">
-                    <CheckCircle2 size={13} /> Activo
-                  </span>
-                ) : null
-              ) : a.account ? (
-                <button
-                  onClick={() => handleDisconnect(a.account!.id)}
-                  disabled={disconnecting === a.account.id}
-                  className="h-8 px-3 rounded-xl text-xs font-medium border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors flex items-center gap-1.5"
-                >
-                  {disconnecting === a.account.id
-                    ? <Loader2 size={11} className="animate-spin" />
-                    : <X size={11} />}
-                  Desconectar
-                </button>
-              ) : (
-                <button
-                  onClick={handleConnect}
-                  className="h-8 px-3 rounded-xl text-xs font-semibold text-white"
-                  style={{ background: "hsl(var(--primary))" }}
-                >
-                  Conectar
+              {a.connected && <CheckCircle2 size={11} />}
+              {a.label}
+              {a.connected && a.key !== "st" && (
+                <button onClick={() => handleDisconnect(a.account!.id)} disabled={disconnecting === a.account!.id} className="ml-1 hover:text-destructive transition-colors">
+                  {disconnecting === a.account!.id ? <Loader2 size={10} className="animate-spin" /> : <X size={10} />}
                 </button>
               )}
             </div>
           ))}
+        </div>
+
+        {/* Permisos requeridos */}
+        <div className="rounded-xl border border-border bg-muted/30 p-3 mb-4">
+          <p className="text-xs font-semibold text-foreground/70 mb-2">Permisos que debe tener tu token:</p>
+          <div className="flex flex-wrap gap-1.5">
+            {["pages_manage_posts", "pages_read_engagement", "pages_show_list", "instagram_business_basic", "instagram_business_content_publish"].map((p) => (
+              <span key={p} className="px-2 py-0.5 rounded-full bg-muted border border-border text-xs font-mono text-muted-foreground">{p}</span>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Generá el token desde <span className="text-foreground font-medium">Business Manager → Usuarios del sistema → Generar token</span> con los permisos listados arriba.
+          </p>
+        </div>
+
+        {/* Formulario */}
+        <div className="space-y-3">
+          <div>
+            <Label className="text-xs font-semibold text-foreground/70 mb-1.5 block">Token de acceso permanente</Label>
+            <div className="relative">
+              <Key size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type={showMetaToken ? "text" : "password"}
+                value={metaToken}
+                onChange={(e) => setMetaToken(e.target.value)}
+                placeholder="Pegá tu token permanente aquí..."
+                className="pl-9 pr-9 bg-muted border-border rounded-xl h-10 font-mono text-xs"
+              />
+              <button onClick={() => setShowMetaToken(!showMetaToken)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                {showMetaToken ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs font-semibold text-foreground/70 mb-1.5 block flex items-center gap-1.5">
+                <Facebook size={12} className="text-blue-400" /> Facebook Page ID
+              </Label>
+              <Input value={fbPageId} onChange={(e) => setFbPageId(e.target.value)} placeholder="123456789" className="bg-muted border-border rounded-xl h-10 font-mono text-xs" />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-foreground/70 mb-1.5 block">Nombre de la página</Label>
+              <Input value={fbPageName} onChange={(e) => setFbPageName(e.target.value)} placeholder="Mi Negocio" className="bg-muted border-border rounded-xl h-10 text-sm" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs font-semibold text-foreground/70 mb-1.5 block flex items-center gap-1.5">
+                <Instagram size={12} className="text-pink-400" /> Instagram Business ID <span className="text-muted-foreground font-normal">(opcional)</span>
+              </Label>
+              <Input value={igBusinessId} onChange={(e) => setIgBusinessId(e.target.value)} placeholder="987654321" className="bg-muted border-border rounded-xl h-10 font-mono text-xs" />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-foreground/70 mb-1.5 block">Usuario de Instagram</Label>
+              <Input value={igUsername} onChange={(e) => setIgUsername(e.target.value)} placeholder="mi_negocio" className="bg-muted border-border rounded-xl h-10 text-sm" />
+            </div>
+          </div>
+
+          <button
+            onClick={handleSaveMeta}
+            disabled={savingMeta || !metaToken || !fbPageId || !fbPageName}
+            className="w-full h-10 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(342 62% 36%))" }}
+          >
+            {savingMeta ? <><Loader2 size={14} className="animate-spin" /> Guardando...</> : <><Save size={14} /> Guardar configuración de Meta</>}
+          </button>
         </div>
       </motion.div>
 
