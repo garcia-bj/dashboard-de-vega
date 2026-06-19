@@ -27,7 +27,6 @@ RUN mkdir -p uploads
 
 ENV PATH=/root/.local/bin:$PATH
 ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/app
 
 EXPOSE 8000
 
