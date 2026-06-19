@@ -40,6 +40,14 @@ class Settings(BaseSettings):
     ADMIN_EMAIL: str = ""
     ADMIN_PASSWORD: str = ""
 
+    @property
+    def cors_origins_list(self) -> list[str]:
+        origins = {o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()}
+        if self.FRONTEND_URL:
+            origins.add(self.FRONTEND_URL.rstrip("/"))
+        origins.add("http://localhost:3000")
+        return list(origins)
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
