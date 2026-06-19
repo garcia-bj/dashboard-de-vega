@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 from uuid import uuid4
+from datetime import datetime
 import aiofiles
 from app.config import get_settings
 
@@ -81,7 +82,7 @@ class S3Storage(StorageBackend):
                 region_name=self.region,
                 aws_access_key_id=self.access_key,
                 aws_secret_access_key=self.secret_key,
-                config=BotoConfig(signature_version="s3v4"),
+                config=BotoConfig(signature_version="s3v4", s3={"addressing_style": "path"}),
             ).__aenter__()
         return self._client
 
@@ -127,4 +128,6 @@ def get_storage() -> StorageBackend:
 
 
 def generate_image_path(publication_id: str, extension: str = "png") -> str:
-    return f"publications/{publication_id}/{uuid4().hex}.{extension}"
+    date_str = datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S")
+    suffix = uuid4().hex[:4]
+    return f"publications/{publication_id}/{date_str}_{suffix}.{extension}"

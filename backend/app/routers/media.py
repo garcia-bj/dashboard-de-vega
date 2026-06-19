@@ -23,7 +23,7 @@ async def serve_media(file_path: str):
                 region_name=settings.STORAGE_S3_REGION,
                 aws_access_key_id=settings.STORAGE_S3_ACCESS_KEY,
                 aws_secret_access_key=settings.STORAGE_S3_SECRET_KEY,
-                config=BotoConfig(signature_version="s3v4"),
+                config=BotoConfig(signature_version="s3v4", s3={"addressing_style": "path"}),
             ) as s3:
                 presigned = await s3.generate_presigned_url(
                     "get_object",
