@@ -62,8 +62,12 @@ async def enhance_prompt(
             )
             res.raise_for_status()
             data = res.json()
-    except httpx.HTTPError as e:
-        raise HTTPException(502, f"Error al conectar con Gemini: {str(e)}")
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 429:
+            raise HTTPException(429, "Límite de uso de Gemini alcanzado. Esperá unos segundos e intentá de nuevo.")
+        raise HTTPException(502, "Error al conectar con Gemini")
+    except httpx.HTTPError:
+        raise HTTPException(502, "Error al conectar con Gemini")
 
     try:
         enhanced = data["candidates"][0]["content"]["parts"][0]["text"].strip()
@@ -127,8 +131,9 @@ async def generate_via_n8n(
             else:
                 ext = "jpg" if "jpeg" in mime else mime.split("/")[-1]
 
-            # Data URI con el mime type correcto para preview inmediato
-            data_uri = f"data:{mime};base64,{b64_str}"
+            # Re-encodear desde los bytes para garantizar base64 limpio (sin saltos de línea)
+            b64_clean = base64.b64encode(image_bytes).decode()
+            data_uri = f"data:{mime};base64,{b64_clean}"
 
             # Guardar en storage para persistencia
             storage = get_storage()

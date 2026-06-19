@@ -83,7 +83,7 @@ class Publication(Base):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     prompt: Mapped[str] = mapped_column(Text, nullable=False)
     caption: Mapped[str | None] = mapped_column(Text)
-    ai_model: Mapped[AImodel] = mapped_column(SAEnum(AImodel), nullable=False, default=AImodel.GEMINI)
+    ai_model: Mapped[AImodel] = mapped_column(String(30), nullable=False, default=AImodel.GEMINI)
     image_url: Mapped[str | None] = mapped_column(Text)
     status: Mapped[PublicationStatus] = mapped_column(
         SAEnum(PublicationStatus), default=PublicationStatus.DRAFT, index=True
@@ -105,7 +105,7 @@ class GenerationLog(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     publication_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("publications.id"), nullable=False, index=True)
-    ai_model: Mapped[AImodel] = mapped_column(SAEnum(AImodel), nullable=False)
+    ai_model: Mapped[AImodel] = mapped_column(String(30), nullable=False)
     prompt: Mapped[str] = mapped_column(Text, nullable=False)
     image_url: Mapped[str | None] = mapped_column(Text)
     request_payload: Mapped[dict | None] = mapped_column(JSONB)
