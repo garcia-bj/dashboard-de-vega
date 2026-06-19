@@ -3,6 +3,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from uuid import UUID
 import httpx
+import base64
+import uuid as uuid_lib
+
+from app.utils.storage import get_storage, generate_image_path
 
 from app.db.database import get_db
 from app.models.user import User, Publication, SocialAccount, PublishLog, PublicationStatus, PublishTarget
@@ -100,13 +104,31 @@ async def generate_via_n8n(
     except httpx.HTTPError as e:
         raise HTTPException(502, f"Error del webhook n8n: {str(e)}")
 
-    image_url = (
-        data.get("image_url") or data.get("url") or data.get("output") or
-        (data.get("result") or {}).get("image") or data.get("data", {}).get("url")
-    )
+    image_url = None
 
-    if not image_url:
-        image_url = None
+    # Respuesta base64 del webhook (formato actual de n8n)
+    raw_b64 = data.get("imagen_base64")
+    formato = data.get("formato")  # "data:image/jpeg;base64,..."
+    mime = data.get("mime_type", "image/jpeg")
+
+    if raw_b64 or formato:
+        try:
+            b64_str = raw_b64 or formato.split(",", 1)[1]
+            image_bytes = base64.b64decode(b64_str)
+            storage = get_storage()
+            ext = "jpg" if "jpeg" in mime else mime.split("/")[-1]
+            pub_id = payload.get("publication_id", str(uuid_lib.uuid4()))
+            path = generate_image_path(pub_id, extension=ext)
+            await storage.upload(image_bytes, path, content_type=mime)
+            image_url = storage.get_url(path)
+        except Exception as e:
+            raise HTTPException(502, f"Error al procesar imagen del webhook: {str(e)}")
+    else:
+        # Fallback para respuestas con URL directa
+        image_url = (
+            data.get("image_url") or data.get("url") or data.get("output") or
+            (data.get("result") or {}).get("image") or data.get("data", {}).get("url")
+        )
 
     if payload.get("publication_id"):
         result = await db.execute(
