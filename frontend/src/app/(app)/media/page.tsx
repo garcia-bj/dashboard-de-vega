@@ -113,7 +113,7 @@ export default function MediaPage() {
               {dateRanges.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
             </SelectContent>
           </Select>
-          <div className="flex gap-1.5">
+          <div className="flex flex-wrap gap-1.5">
             {statusFilters.map((s) => (
               <button key={s} onClick={() => { setStatusFilter(s); setPage(1); }}
                 className={cn(
@@ -175,7 +175,7 @@ export default function MediaPage() {
                       {item.targets.length > 0 && <span>{item.targets.length} redes</span>}
                     </div>
                   </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0">
                     {item.image_url && (
                       <button onClick={() => window.open(item.image_url!, "_blank")}
                         className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
@@ -231,21 +231,28 @@ export default function MediaPage() {
 
       {!loading && filtered.length > 0 && (
         <div className="flex items-center justify-between text-xs text-muted-foreground pt-2">
-          <span>{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} de {filtered.length}</span>
-          <div className="flex gap-1">
+          <span className="flex-shrink-0">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} de {filtered.length}</span>
+          <div className="flex gap-1 overflow-x-auto max-w-[60vw] pb-1">
             <button disabled={page === 1} onClick={() => setPage(page - 1)}
-              className="p-1.5 rounded-lg hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+              className="p-1.5 rounded-lg hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0">
               <ChevronLeft size={15} />
             </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-              <button key={n} onClick={() => setPage(n)}
-                className={cn("w-7 h-7 rounded-lg text-xs transition-colors",
-                  n === page ? "bg-primary text-primary-foreground" : "hover:bg-accent text-muted-foreground hover:text-foreground")}>
-                {n}
-              </button>
-            ))}
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((n) => totalPages <= 7 || Math.abs(n - page) <= 2 || n === 1 || n === totalPages)
+              .map((n, idx, arr) => (
+                <>
+                  {idx > 0 && arr[idx - 1] !== n - 1 && (
+                    <span key={`ellipsis-${n}`} className="w-7 h-7 flex items-center justify-center text-muted-foreground/50">…</span>
+                  )}
+                  <button key={n} onClick={() => setPage(n)}
+                    className={cn("w-7 h-7 rounded-lg text-xs transition-colors flex-shrink-0",
+                      n === page ? "bg-primary text-primary-foreground" : "hover:bg-accent text-muted-foreground hover:text-foreground")}>
+                    {n}
+                  </button>
+                </>
+              ))}
             <button disabled={page === totalPages} onClick={() => setPage(page + 1)}
-              className="p-1.5 rounded-lg hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+              className="p-1.5 rounded-lg hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-shrink-0">
               <ChevronRight size={15} />
             </button>
           </div>

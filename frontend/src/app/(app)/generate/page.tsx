@@ -376,24 +376,24 @@ export default function GeneratePage() {
               </AnimatePresence>
             </div>
             {result && (
-              <div className="flex gap-2 mt-4 pt-4 border-t border-border">
+              <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-border">
                 <button
                   onClick={handleDiscard}
-                  className="flex-1 h-10 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors flex items-center justify-center gap-1.5"
+                  className="flex-1 min-w-[90px] h-10 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors flex items-center justify-center gap-1.5"
                 >
                   <X size={14} /> Descartar
                 </button>
                 <button
                   onClick={handleGenerate}
                   disabled={generating}
-                  className="flex-1 h-10 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40"
+                  className="flex-1 min-w-[90px] h-10 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40"
                 >
                   <RefreshCw size={14} /> Reiniciar
                 </button>
                 <button
                   onClick={handleAccept}
                   disabled={saving}
-                  className="flex-1 h-10 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-1.5 disabled:opacity-40"
+                  className="flex-1 min-w-[100px] h-10 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-1.5 disabled:opacity-40"
                   style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(342 62% 36%))" }}
                 >
                   {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}

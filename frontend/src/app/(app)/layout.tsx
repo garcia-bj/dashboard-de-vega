@@ -32,8 +32,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token);
   const logout = useAuthStore((s) => s.logout);
   const [mounted, setMounted] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    const check = () => setIsDesktop(window.innerWidth >= 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
   useEffect(() => {
     const stored = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     if (!stored && !token) router.replace("/login");
@@ -196,10 +203,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main */}
       <motion.div
-        animate={{ marginLeft: collapsed ? 64 : 256 }}
-        transition={{ type: "spring", stiffness: 380, damping: 32 }}
-        className="flex-1 flex flex-col min-h-screen lg:ml-0"
-        style={typeof window !== "undefined" && window.innerWidth >= 1024 ? undefined : { marginLeft: 0 }}
+        animate={{ marginLeft: isDesktop ? (collapsed ? 64 : 256) : 0 }}
+        transition={isDesktop ? { type: "spring", stiffness: 380, damping: 32 } : { duration: 0 }}
+        className="flex-1 flex flex-col min-h-screen"
       >
         {/* Topbar */}
         <header className="sticky top-0 z-30 h-14 border-b border-border bg-background/80 backdrop-blur-xl flex items-center justify-between px-4 md:px-6 flex-shrink-0">

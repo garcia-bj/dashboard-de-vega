@@ -80,7 +80,7 @@ export default function DashboardPage() {
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: "radial-gradient(ellipse at top left, hsl(342 62% 44% / 0.08), transparent 60%)" }} />
         <div className="relative z-10">
-          <h1 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight mb-1">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-foreground tracking-tight mb-1">
             Bienvenido a <span style={{ color: "hsl(var(--secondary))" }}>De Vega</span>
           </h1>
           <p className="text-muted-foreground text-sm max-w-lg">
@@ -112,13 +112,13 @@ export default function DashboardPage() {
               <div className={`w-9 h-9 rounded-xl bg-muted flex items-center justify-center mb-3 ${m.iconColor}`}>
                 <m.icon size={18} />
               </div>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">{m.label}</p>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1 truncate">{m.label}</p>
               {loading ? (
                 <Loader2 size={18} className="animate-spin text-muted-foreground mt-1" />
               ) : (
-                <div className="flex items-end gap-2">
-                  <p className="text-3xl font-bold text-foreground">{m.value}</p>
-                  <span className="text-xs text-muted-foreground mb-1 flex items-center gap-0.5">
+                <div className="flex items-end gap-1.5 flex-wrap">
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground">{m.value}</p>
+                  <span className="text-xs text-muted-foreground mb-0.5 flex items-center gap-0.5">
                     <ArrowUpRight size={10} />{m.sub}
                   </span>
                 </div>
