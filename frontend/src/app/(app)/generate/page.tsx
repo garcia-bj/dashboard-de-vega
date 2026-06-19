@@ -149,10 +149,15 @@ export default function GeneratePage() {
 
   const handleAccept = async () => {
     const token = useAuthStore.getState().token || localStorage.getItem("token");
-    if (!token || !storageUrl) return;
+    if (!token || (!storageUrl && !result)) return;
     setSaving(true);
     try {
-      await api.publish.saveToGallery({ image_url: storageUrl, prompt: prompt.trim(), model: model.id }, token);
+      await api.publish.saveToGallery({
+        image_url: storageUrl,
+        data_uri: !storageUrl ? result : null,
+        prompt: prompt.trim(),
+        model: model.id,
+      }, token);
       toast.success("Imagen guardada en galería");
       setResult(null); setStorageUrl(null); setPrompt(""); setSelStyles([]);
     } catch (e) {

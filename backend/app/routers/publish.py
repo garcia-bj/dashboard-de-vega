@@ -113,15 +113,25 @@ async def generate_via_n8n(
     mime = data.get("mime_type", "image/jpeg")
 
     if raw_b64 or formato:
-        # Data URI para preview inmediato en el navegador (no depende del storage)
-        data_uri = formato or f"data:{mime};base64,{raw_b64}"
-
-        # También guardar en storage para persistencia
         try:
             b64_str = raw_b64 or formato.split(",", 1)[1]
             image_bytes = base64.b64decode(b64_str)
+
+            # Detectar formato real desde los bytes (ignora el mime_type de n8n que puede ser incorrecto)
+            if image_bytes[:8] == b'\x89PNG\r\n\x1a\n':
+                mime = "image/png"
+                ext = "png"
+            elif image_bytes[:3] == b'\xff\xd8\xff':
+                mime = "image/jpeg"
+                ext = "jpg"
+            else:
+                ext = "jpg" if "jpeg" in mime else mime.split("/")[-1]
+
+            # Data URI con el mime type correcto para preview inmediato
+            data_uri = f"data:{mime};base64,{b64_str}"
+
+            # Guardar en storage para persistencia
             storage = get_storage()
-            ext = "jpg" if "jpeg" in mime else mime.split("/")[-1]
             pub_id = payload.get("publication_id", str(uuid_lib.uuid4()))
             path = generate_image_path(pub_id, extension=ext)
             await storage.upload(image_bytes, path, content_type=mime)
@@ -164,11 +174,31 @@ async def save_to_gallery(
     from app.models.user import AImodel
 
     image_url = payload.get("image_url")
+    data_uri = payload.get("data_uri")
     prompt = payload.get("prompt", "")
     model_id = payload.get("model", "gemini")
 
-    if not image_url:
-        raise HTTPException(400, "Se requiere image_url")
+    if not image_url and not data_uri:
+        raise HTTPException(400, "Se requiere image_url o data_uri")
+
+    # Si solo tenemos data_uri, guardarlo en storage ahora
+    if not image_url and data_uri and data_uri.startswith("data:"):
+        try:
+            header, b64_str = data_uri.split(",", 1)
+            mime = header.split(":")[1].split(";")[0]
+            image_bytes = base64.b64decode(b64_str)
+            if image_bytes[:8] == b'\x89PNG\r\n\x1a\n':
+                mime, ext = "image/png", "png"
+            elif image_bytes[:3] == b'\xff\xd8\xff':
+                mime, ext = "image/jpeg", "jpg"
+            else:
+                ext = mime.split("/")[-1]
+            storage = get_storage()
+            path = generate_image_path(str(uuid_lib.uuid4()), extension=ext)
+            await storage.upload(image_bytes, path, content_type=mime)
+            image_url = storage.get_url(path)
+        except Exception as e:
+            raise HTTPException(502, f"Error al guardar imagen: {str(e)}")
 
     ai_model = AImodel.OPENAI if model_id == "openai" else AImodel.GEMINI
     title = (prompt[:60] + "...") if len(prompt) > 60 else prompt or "Imagen generada"
