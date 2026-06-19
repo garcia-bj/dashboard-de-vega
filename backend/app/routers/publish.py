@@ -14,11 +14,59 @@ from app.config import get_settings
 settings = get_settings()
 router = APIRouter(prefix="/api/publish", tags=["publish"])
 
+GEMINI_TEXT_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+
+ENHANCE_SYSTEM = (
+    "Eres un experto en prompts para generación de imágenes con IA. "
+    "Tu tarea es mejorar el prompt del usuario para obtener imágenes más detalladas y de mayor calidad. "
+    "Mantené la idea original pero añadí detalles de: composición, iluminación, paleta de colores, "
+    "estilo artístico, texturas y técnica fotográfica o pictórica. "
+    "Respondé ÚNICAMENTE con el prompt mejorado en el mismo idioma que el original, sin explicaciones ni texto adicional."
+)
+
 meta_service = MetaService()
 
 
 def _n8n_img_url() -> str:
     return settings.N8N_IMG_GENERATION_URL or f"{settings.N8N_WEBHOOK_URL}{settings.N8N_IMAGE_GEN_WEBHOOK}"
+
+
+@router.post("/enhance-prompt")
+async def enhance_prompt(
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+):
+    prompt = payload.get("prompt", "").strip()
+    if not prompt:
+        raise HTTPException(400, "El prompt no puede estar vacío")
+
+    meta = current_user.meta_data or {}
+    api_key = meta.get("api_key_gemini") or settings.GEMINI_API_KEY
+    if not api_key:
+        raise HTTPException(400, "Configurá tu Gemini API Key en Configuración para usar el mejorador de prompts")
+
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            res = await client.post(
+                GEMINI_TEXT_URL,
+                params={"key": api_key},
+                json={
+                    "system_instruction": {"parts": [{"text": ENHANCE_SYSTEM}]},
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {"temperature": 0.7, "maxOutputTokens": 512},
+                },
+            )
+            res.raise_for_status()
+            data = res.json()
+    except httpx.HTTPError as e:
+        raise HTTPException(502, f"Error al conectar con Gemini: {str(e)}")
+
+    try:
+        enhanced = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+    except (KeyError, IndexError):
+        raise HTTPException(502, "Respuesta inesperada de Gemini")
+
+    return {"enhanced_prompt": enhanced}
 
 
 @router.post("/generate")

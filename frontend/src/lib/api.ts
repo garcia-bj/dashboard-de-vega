@@ -160,6 +160,8 @@ export const api = {
   publish: {
     generate: (data: unknown, token: string) =>
       request<GenerateResult>("/api/publish/generate", { method: "POST", body: data, token }),
+    enhancePrompt: (prompt: string, token: string) =>
+      request<{ enhanced_prompt: string }>("/api/publish/enhance-prompt", { method: "POST", body: { prompt }, token }),
     publish: (publicationId: string, token: string) =>
       request<unknown>(`/api/publish/publication/${publicationId}`, { method: "POST", token }),
   },

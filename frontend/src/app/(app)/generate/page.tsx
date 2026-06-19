@@ -15,7 +15,7 @@ import {
 import {
   Sparkles, Wand2, ImageIcon, CalendarDays, Share2, Download,
   RefreshCw, X, CheckCircle2, AlertCircle,
-  SlidersHorizontal, Eye, Loader2, Settings, Clock,
+  SlidersHorizontal, Eye, Loader2, Settings, Clock, Zap,
 } from "lucide-react";
 
 const models = [
@@ -41,12 +41,28 @@ export default function GeneratePage() {
   const { logo, referenceImage } = useSettingsStore();
   const [model, setModel] = useState(models[0]);
   const [prompt, setPrompt] = useState("");
-  const [negPrompt, setNegPrompt] = useState("");
   const [size, setSize] = useState(models[0].sizes[2]);
   const [selStyles, setSelStyles] = useState<string[]>([]);
   const [generating, setGenerating] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState("");
+
+  const handleEnhance = async () => {
+    if (!prompt.trim()) return toast.error("Escribe un prompt para mejorar");
+    const token = useAuthStore.getState().token || localStorage.getItem("token");
+    if (!token) { toast.error("Sesión expirada"); return; }
+    setEnhancing(true);
+    try {
+      const data = await api.publish.enhancePrompt(prompt.trim(), token);
+      setPrompt(data.enhanced_prompt);
+      toast.success("Prompt mejorado");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error al mejorar el prompt");
+    } finally {
+      setEnhancing(false);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return toast.error("Escribe un prompt");
@@ -56,7 +72,6 @@ export default function GeneratePage() {
     const body: Record<string, string> = { prompt: prompt.trim(), model: model.id };
     if (selStyles.length) body.style = selStyles.join(", ");
     if (model.showSize && size) body.size = size.split(" ")[0];
-    if (negPrompt.trim()) body.negative_prompt = negPrompt.trim();
     try {
       const data = await api.publish.generate(body, token);
       const url = data.image_url;
@@ -131,18 +146,19 @@ export default function GeneratePage() {
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              rows={4}
+              rows={5}
               placeholder="Describe la imagen: composición, iluminación, estilo, colores..."
               className="w-full rounded-xl border border-border bg-muted px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
             />
-            <label className="text-xs font-semibold text-foreground/70 mt-3 mb-2 block">Prompt Negativo</label>
-            <textarea
-              value={negPrompt}
-              onChange={(e) => setNegPrompt(e.target.value)}
-              rows={2}
-              placeholder="Elementos a excluir..."
-              className="w-full rounded-xl border border-border bg-muted px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
-            />
+            <button
+              onClick={handleEnhance}
+              disabled={enhancing || !prompt.trim()}
+              className="mt-2.5 w-full h-9 rounded-xl border border-secondary/40 text-xs font-semibold text-secondary hover:bg-secondary/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1.5"
+            >
+              {enhancing
+                ? <><Loader2 size={13} className="animate-spin" /> Mejorando prompt...</>
+                : <><Zap size={13} /> Mejorar prompt con IA</>}
+            </button>
           </div>
 
           {/* Size + Styles */}
@@ -208,7 +224,7 @@ export default function GeneratePage() {
 
           <div className="flex gap-3">
             <button
-              onClick={() => { setPrompt(""); setNegPrompt(""); setSelStyles([]); setResult(null); }}
+              onClick={() => { setPrompt(""); setSelStyles([]); setResult(null); }}
               className="h-10 px-4 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex items-center gap-2"
             >
               <RefreshCw size={14} /> Reiniciar
