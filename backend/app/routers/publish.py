@@ -119,6 +119,9 @@ async def generate_via_n8n(
     if raw_b64 or formato:
         try:
             b64_str = raw_b64 or formato.split(",", 1)[1]
+            # Strip data URI prefix if n8n already embeds it in the base64 field
+            if isinstance(b64_str, str) and b64_str.startswith("data:"):
+                b64_str = b64_str.split(",", 1)[1]
             image_bytes = base64.b64decode(b64_str)
 
             # Detectar formato real desde los bytes (ignora el mime_type de n8n que puede ser incorrecto)

@@ -100,9 +100,9 @@ class S3Storage(StorageBackend):
         await client.delete_object(Bucket=self.bucket, Key=path)
 
     def get_url(self, path: str) -> str:
-        if self.public_url:
-            return f"{self.public_url}/{self.bucket}/{path}"
-        return f"https://{self.bucket}.s3.{self.region}.amazonaws.com/{path}"
+        # Return the backend /media/ path so all requests go through the backend,
+        # which generates presigned S3 URLs (works for private buckets too)
+        return f"/media/{path}"
 
     async def exists(self, path: str) -> bool:
         client = await self._get_client()
