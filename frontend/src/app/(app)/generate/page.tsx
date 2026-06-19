@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -17,6 +17,14 @@ import {
   RefreshCw, X, CheckCircle2, AlertCircle,
   SlidersHorizontal, Eye, Loader2, Settings, Clock, Zap,
 } from "lucide-react";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+function toAbsoluteUrl(url: string): string {
+  if (!url) return url;
+  if (url.startsWith("http")) return url;
+  return `${API_BASE}${url.startsWith("/") ? "" : "/"}${url}`;
+}
 
 const models = [
   {
@@ -45,8 +53,49 @@ export default function GeneratePage() {
   const [selStyles, setSelStyles] = useState<string[]>([]);
   const [generating, setGenerating] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressMsg, setProgressMsg] = useState("");
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const PROGRESS_STEPS = [
+    { pct: 8,  msg: "Enviando prompt al modelo..." },
+    { pct: 20, msg: "Procesando con IA..." },
+    { pct: 40, msg: "Generando composición..." },
+    { pct: 58, msg: "Aplicando estilos y detalles..." },
+    { pct: 72, msg: "Renderizando imagen..." },
+    { pct: 83, msg: "Optimizando resultado..." },
+    { pct: 90, msg: "Casi listo..." },
+  ];
+
+  const startProgress = () => {
+    setProgress(0);
+    setProgressMsg("Iniciando generación...");
+    let step = 0;
+    progressRef.current = setInterval(() => {
+      if (step < PROGRESS_STEPS.length) {
+        setProgress(PROGRESS_STEPS[step].pct);
+        setProgressMsg(PROGRESS_STEPS[step].msg);
+        step++;
+      }
+    }, 2200);
+  };
+
+  const finishProgress = () => {
+    if (progressRef.current) clearInterval(progressRef.current);
+    setProgress(100);
+    setProgressMsg("¡Imagen generada!");
+    setTimeout(() => { setProgress(0); setProgressMsg(""); }, 1200);
+  };
+
+  const resetProgress = () => {
+    if (progressRef.current) clearInterval(progressRef.current);
+    setProgress(0);
+    setProgressMsg("");
+  };
+
+  useEffect(() => () => { if (progressRef.current) clearInterval(progressRef.current); }, []);
 
   const handleEnhance = async () => {
     if (!prompt.trim()) return toast.error("Escribe un prompt para mejorar");
@@ -69,15 +118,25 @@ export default function GeneratePage() {
     const token = useAuthStore.getState().token || localStorage.getItem("token");
     if (!token) { toast.error("Sesión expirada"); return; }
     setGenerating(true); setResult(null); setError("");
+    startProgress();
     const body: Record<string, string> = { prompt: prompt.trim(), model: model.id };
     if (selStyles.length) body.style = selStyles.join(", ");
     if (model.showSize && size) body.size = size.split(" ")[0];
     try {
       const data = await api.publish.generate(body, token);
-      const url = data.image_url;
-      if (url?.startsWith("http")) { setResult(url); toast.success("Imagen generada"); }
-      else { setError("Sin URL en respuesta"); toast.warning("Respuesta inesperada"); }
+      const raw = data.image_url;
+      if (raw) {
+        const url = toAbsoluteUrl(raw);
+        finishProgress();
+        setResult(url);
+        toast.success("Imagen generada");
+      } else {
+        resetProgress();
+        setError("No se recibió imagen del servidor");
+        toast.warning("Respuesta inesperada del servidor");
+      }
     } catch (e) {
+      resetProgress();
       setError(e instanceof Error ? e.message : "Error");
       toast.error("Error al generar");
     } finally {
@@ -254,10 +313,24 @@ export default function GeneratePage() {
             <div className="aspect-square rounded-2xl bg-muted border border-border flex items-center justify-center overflow-hidden">
               <AnimatePresence mode="wait">
                 {generating ? (
-                  <motion.div key="load" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center gap-4">
-                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.4, ease: "linear" }}
-                      className="w-14 h-14 rounded-full border-[3px] border-border border-t-primary" />
-                    <p className="text-sm text-muted-foreground">Generando con {model.provider}...</p>
+                  <motion.div key="load" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center gap-5 w-full px-8">
+                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.6, ease: "linear" }}
+                      className="w-12 h-12 rounded-full border-[3px] border-border border-t-primary" />
+                    <div className="w-full space-y-2">
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>{progressMsg}</span>
+                        <span className="font-mono tabular-nums">{progress}%</span>
+                      </div>
+                      <div className="w-full h-1.5 rounded-full bg-border overflow-hidden">
+                        <motion.div
+                          className="h-full rounded-full"
+                          style={{ background: "linear-gradient(90deg, hsl(var(--primary)), hsl(342 62% 36%))" }}
+                          animate={{ width: `${progress}%` }}
+                          transition={{ duration: 0.6, ease: "easeOut" }}
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Generando con {model.provider}...</p>
                   </motion.div>
                 ) : result ? (
                   <motion.img key="img" src={result} alt="Generated"
