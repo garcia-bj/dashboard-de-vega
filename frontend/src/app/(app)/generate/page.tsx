@@ -13,7 +13,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger,
 } from "@/components/ui/select";
 import {
-  Sparkles, Wand2, ImageIcon, CalendarDays, Share2, Download,
+  Sparkles, Wand2, ImageIcon,
   RefreshCw, X, CheckCircle2, AlertCircle,
   SlidersHorizontal, Eye, Loader2, Settings, Clock, Zap,
 } from "lucide-react";
@@ -53,9 +53,11 @@ export default function GeneratePage() {
   const [selStyles, setSelStyles] = useState<string[]>([]);
   const [generating, setGenerating] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressMsg, setProgressMsg] = useState("");
-  const [result, setResult] = useState<string | null>(null);
+  const [result, setResult] = useState<string | null>(null);   // data_uri para display
+  const [storageUrl, setStorageUrl] = useState<string | null>(null); // URL de storage para guardar
   const [error, setError] = useState("");
   const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -124,11 +126,12 @@ export default function GeneratePage() {
     if (model.showSize && size) body.size = size.split(" ")[0];
     try {
       const data = await api.publish.generate(body, token);
-      const raw = data.image_url;
-      if (raw) {
-        const url = toAbsoluteUrl(raw);
+      // Preferir data_uri para display (no depende de storage ni red)
+      const displayUrl = data.data_uri || toAbsoluteUrl(data.image_url || "");
+      if (displayUrl) {
         finishProgress();
-        setResult(url);
+        setResult(displayUrl);
+        setStorageUrl(data.image_url ? toAbsoluteUrl(data.image_url) : displayUrl);
         toast.success("Imagen generada");
       } else {
         resetProgress();
@@ -142,6 +145,24 @@ export default function GeneratePage() {
     } finally {
       setGenerating(false);
     }
+  };
+
+  const handleAccept = async () => {
+    const token = useAuthStore.getState().token || localStorage.getItem("token");
+    if (!token || !storageUrl) return;
+    setSaving(true);
+    try {
+      await api.publish.saveToGallery({ image_url: storageUrl, prompt: prompt.trim(), model: model.id }, token);
+      toast.success("Imagen guardada en galería");
+      setResult(null); setStorageUrl(null); setPrompt(""); setSelStyles([]);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error al guardar");
+    } finally { setSaving(false); }
+  };
+
+  const handleDiscard = () => {
+    setResult(null); setStorageUrl(null); setError("");
+    toast("Imagen descartada");
   };
 
   const card = "rounded-2xl border border-border bg-card p-5";
@@ -350,18 +371,28 @@ export default function GeneratePage() {
               </AnimatePresence>
             </div>
             {result && (
-              <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-border">
-                <button className="flex-1 h-9 rounded-xl border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex items-center justify-center gap-1.5">
-                  <Download size={14} /> Descargar
+              <div className="flex gap-2 mt-4 pt-4 border-t border-border">
+                <button
+                  onClick={handleDiscard}
+                  className="flex-1 h-10 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <X size={14} /> Descartar
                 </button>
-                <Link href="/schedule" className="flex-1">
-                  <button className="w-full h-9 rounded-xl border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex items-center justify-center gap-1.5">
-                    <CalendarDays size={14} /> Programar
-                  </button>
-                </Link>
-                <button className="flex-1 h-9 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-1.5"
-                  style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(342 62% 36%))" }}>
-                  <Share2 size={14} /> Publicar
+                <button
+                  onClick={handleGenerate}
+                  disabled={generating}
+                  className="flex-1 h-10 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40"
+                >
+                  <RefreshCw size={14} /> Reiniciar
+                </button>
+                <button
+                  onClick={handleAccept}
+                  disabled={saving}
+                  className="flex-1 h-10 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-1.5 disabled:opacity-40"
+                  style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(342 62% 36%))" }}
+                >
+                  {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                  {saving ? "Guardando..." : "Aceptar"}
                 </button>
               </div>
             )}

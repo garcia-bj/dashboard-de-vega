@@ -105,6 +105,7 @@ async def generate_via_n8n(
         raise HTTPException(502, f"Error del webhook n8n: {str(e)}")
 
     image_url = None
+    data_uri = None
 
     # Respuesta base64 del webhook (formato actual de n8n)
     raw_b64 = data.get("imagen_base64")
@@ -112,6 +113,10 @@ async def generate_via_n8n(
     mime = data.get("mime_type", "image/jpeg")
 
     if raw_b64 or formato:
+        # Data URI para preview inmediato en el navegador (no depende del storage)
+        data_uri = formato or f"data:{mime};base64,{raw_b64}"
+
+        # También guardar en storage para persistencia
         try:
             b64_str = raw_b64 or formato.split(",", 1)[1]
             image_bytes = base64.b64decode(b64_str)
@@ -121,8 +126,9 @@ async def generate_via_n8n(
             path = generate_image_path(pub_id, extension=ext)
             await storage.upload(image_bytes, path, content_type=mime)
             image_url = storage.get_url(path)
-        except Exception as e:
-            raise HTTPException(502, f"Error al procesar imagen del webhook: {str(e)}")
+        except Exception:
+            # Si el storage falla, el data_uri sigue sirviendo para el preview
+            image_url = data_uri
     else:
         # Fallback para respuestas con URL directa
         image_url = (
@@ -142,9 +148,44 @@ async def generate_via_n8n(
 
     return {
         "image_url": image_url,
+        "data_uri": data_uri,
         "model": payload.get("model"),
-        "raw_response": data if not image_url else None,
+        "raw_response": None,
     }
+
+
+@router.post("/save-to-gallery")
+async def save_to_gallery(
+    payload: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from datetime import datetime
+    from app.models.user import AImodel
+
+    image_url = payload.get("image_url")
+    prompt = payload.get("prompt", "")
+    model_id = payload.get("model", "gemini")
+
+    if not image_url:
+        raise HTTPException(400, "Se requiere image_url")
+
+    ai_model = AImodel.OPENAI if model_id == "openai" else AImodel.GEMINI
+    title = (prompt[:60] + "...") if len(prompt) > 60 else prompt or "Imagen generada"
+
+    pub = Publication(
+        user_id=current_user.id,
+        title=title,
+        prompt=prompt,
+        ai_model=ai_model,
+        image_url=image_url,
+        status=PublicationStatus.GENERATED,
+        targets=[],
+        scheduled_at=datetime.utcnow(),
+    )
+    db.add(pub)
+    await db.flush()
+    return {"id": str(pub.id), "image_url": image_url}
 
 
 @router.post("/publication/{publication_id}")

@@ -86,6 +86,7 @@ export interface SettingsOut {
 
 export interface GenerateResult {
   image_url: string | null;
+  data_uri: string | null;
   model: string;
   raw_response: unknown | null;
 }
@@ -162,6 +163,8 @@ export const api = {
       request<GenerateResult>("/api/publish/generate", { method: "POST", body: data, token }),
     enhancePrompt: (prompt: string, token: string) =>
       request<{ enhanced_prompt: string }>("/api/publish/enhance-prompt", { method: "POST", body: { prompt }, token }),
+    saveToGallery: (data: { image_url: string; prompt: string; model: string }, token: string) =>
+      request<{ id: string; image_url: string }>("/api/publish/save-to-gallery", { method: "POST", body: data, token }),
     publish: (publicationId: string, token: string) =>
       request<unknown>(`/api/publish/publication/${publicationId}`, { method: "POST", token }),
   },
