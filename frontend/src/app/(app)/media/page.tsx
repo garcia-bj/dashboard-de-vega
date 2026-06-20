@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import {
   Plus, CalendarDays, ChevronLeft, ChevronRight, Grid3X3, List,
-  MoreVertical, Clock, CheckCircle2, Edit3, AlertCircle, Sparkles, Trash2, Eye, Loader2,
+  MoreVertical, Clock, CheckCircle2, Edit3, AlertCircle, Sparkles, Trash2, Eye, Loader2, Download,
 } from "lucide-react";
 
 const statusConfig: Record<string, { label: string; variant: "success" | "warning" | "ghost" | "destructive" | "default"; icon: typeof CheckCircle2 }> = {
@@ -74,6 +74,24 @@ export default function MediaPage() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const handleDownload = async (url: string, title: string) => {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const ext = blob.type.includes("png") ? "png" : "jpg";
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = `${title}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      toast.error("Error al descargar imagen");
+    }
+  };
 
   const handleDelete = async (id: string) => {
     if (!token) return;
@@ -177,17 +195,20 @@ export default function MediaPage() {
                   </div>
                   <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0">
                     {item.image_url && (
-                      <button onClick={() => window.open(item.image_url!, "_blank")}
-                        className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
-                        <Eye size={14} />
-                      </button>
+                      <>
+                        <button onClick={() => window.open(item.image_url!, "_blank")}
+                          className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="Ver">
+                          <Eye size={14} />
+                        </button>
+                        <button onClick={() => handleDownload(item.image_url!, item.title)}
+                          className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="Descargar">
+                          <Download size={14} />
+                        </button>
+                      </>
                     )}
                     <button onClick={() => handleDelete(item.id)} disabled={deleting === item.id}
                       className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
                       {deleting === item.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                    </button>
-                    <button className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
-                      <MoreVertical size={14} />
                     </button>
                   </div>
                 </div>
@@ -208,7 +229,13 @@ export default function MediaPage() {
                   <Badge variant={s.variant} className="absolute top-2.5 left-2.5 gap-1 shadow-lg">
                     <s.icon size={9} />{s.label}
                   </Badge>
-                  <div className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                    {item.image_url && (
+                      <button onClick={() => handleDownload(item.image_url!, item.title)}
+                        className="w-7 h-7 rounded-lg bg-background/80 backdrop-blur-sm border border-border flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="Descargar">
+                        <Download size={12} />
+                      </button>
+                    )}
                     <button onClick={() => handleDelete(item.id)} disabled={deleting === item.id}
                       className="w-7 h-7 rounded-lg bg-background/80 backdrop-blur-sm border border-border flex items-center justify-center hover:bg-destructive/10 hover:text-destructive text-muted-foreground transition-colors">
                       {deleting === item.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}

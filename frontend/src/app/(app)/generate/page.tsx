@@ -15,7 +15,7 @@ import {
 import {
   Sparkles, Wand2, ImageIcon,
   RefreshCw, X, CheckCircle2, AlertCircle,
-  SlidersHorizontal, Eye, Loader2, Settings, Clock, Zap,
+  SlidersHorizontal, Eye, Loader2, Settings, Clock, Zap, UtensilsCrossed, Tag,
 } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -51,6 +51,9 @@ export default function GeneratePage() {
   const [prompt, setPrompt] = useState("");
   const [size, setSize] = useState(models[0].sizes[2]);
   const [selStyles, setSelStyles] = useState<string[]>([]);
+  const [mode, setMode] = useState<"libre" | "personalizado">("libre");
+  const [dish, setDish] = useState("");
+  const [price, setPrice] = useState("");
   const [generating, setGenerating] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -115,13 +118,24 @@ export default function GeneratePage() {
     }
   };
 
+  const getEffectivePrompt = () => {
+    if (mode === "personalizado") {
+      if (!dish.trim()) return "";
+      return `${dish.trim()}${price.trim() ? `, precio ${price.trim()} Bs` : ""}`;
+    }
+    return prompt.trim();
+  };
+
   const handleGenerate = async () => {
-    if (!prompt.trim()) return toast.error("Escribe un prompt");
+    const effectivePrompt = getEffectivePrompt();
+    if (!effectivePrompt) {
+      return toast.error(mode === "personalizado" ? "Escribe el nombre del plato" : "Escribe un prompt");
+    }
     const token = useAuthStore.getState().token || localStorage.getItem("token");
     if (!token) { toast.error("Sesión expirada"); return; }
     setGenerating(true); setResult(null); setError("");
     startProgress();
-    const body: Record<string, string> = { prompt: prompt.trim(), model: model.id };
+    const body: Record<string, string> = { prompt: effectivePrompt, model: model.id };
     if (selStyles.length) body.style = selStyles.join(", ");
     if (model.showSize && size) body.size = size.split(" ")[0];
     try {
@@ -155,11 +169,11 @@ export default function GeneratePage() {
       await api.publish.saveToGallery({
         image_url: storageUrl,
         data_uri: !storageUrl ? result : null,
-        prompt: prompt.trim(),
+        prompt: getEffectivePrompt(),
         model: model.id,
       }, token);
       toast.success("Imagen guardada en galería");
-      setResult(null); setStorageUrl(null); setPrompt(""); setSelStyles([]);
+      setResult(null); setStorageUrl(null); setPrompt(""); setDish(""); setPrice(""); setSelStyles([]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Error al guardar");
     } finally { setSaving(false); }
@@ -222,28 +236,93 @@ export default function GeneratePage() {
 
           {/* Prompt */}
           <div className={card}>
-            <div className="flex items-center justify-between mb-2">
-              <label className={fieldLabel}>Prompt</label>
-              <button onClick={() => setPrompt("")} className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors">
-                <X size={11} /> Limpiar
+            {/* Mode toggle */}
+            <div className="flex rounded-xl overflow-hidden border border-border mb-4">
+              <button
+                onClick={() => setMode("libre")}
+                className={cn(
+                  "flex-1 h-9 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5",
+                  mode === "libre"
+                    ? "bg-primary text-white"
+                    : "bg-muted text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Wand2 size={12} /> Prompt Libre
+              </button>
+              <button
+                onClick={() => setMode("personalizado")}
+                className={cn(
+                  "flex-1 h-9 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5",
+                  mode === "personalizado"
+                    ? "bg-primary text-white"
+                    : "bg-muted text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <UtensilsCrossed size={12} /> Personalizado
               </button>
             </div>
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows={5}
-              placeholder="Describe la imagen: composición, iluminación, estilo, colores..."
-              className="w-full rounded-xl border border-border bg-muted px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
-            />
-            <button
-              onClick={handleEnhance}
-              disabled={enhancing || !prompt.trim()}
-              className="mt-2.5 w-full h-9 rounded-xl border border-secondary/40 text-xs font-semibold text-secondary hover:bg-secondary/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1.5"
-            >
-              {enhancing
-                ? <><Loader2 size={13} className="animate-spin" /> Mejorando prompt...</>
-                : <><Zap size={13} /> Mejorar prompt con IA</>}
-            </button>
+
+            {mode === "libre" ? (
+              <>
+                <div className="flex items-center justify-between mb-2">
+                  <label className={fieldLabel}>Prompt</label>
+                  <button onClick={() => setPrompt("")} className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors">
+                    <X size={11} /> Limpiar
+                  </button>
+                </div>
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  rows={5}
+                  placeholder="Describe la imagen: composición, iluminación, estilo, colores..."
+                  className="w-full rounded-xl border border-border bg-muted px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+                />
+                <button
+                  onClick={handleEnhance}
+                  disabled={enhancing || !prompt.trim()}
+                  className="mt-2.5 w-full h-9 rounded-xl border border-secondary/40 text-xs font-semibold text-secondary hover:bg-secondary/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1.5"
+                >
+                  {enhancing
+                    ? <><Loader2 size={13} className="animate-spin" /> Mejorando prompt...</>
+                    : <><Zap size={13} /> Mejorar prompt con IA</>}
+                </button>
+              </>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className={fieldLabel}>Plato / Producto</label>
+                  <div className="relative">
+                    <UtensilsCrossed size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={dish}
+                      onChange={(e) => setDish(e.target.value)}
+                      placeholder="Ej: Churrasco a la parrilla"
+                      className="w-full rounded-xl border border-border bg-muted pl-9 pr-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className={fieldLabel}>Precio</label>
+                  <div className="relative">
+                    <Tag size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      placeholder="Ej: 85"
+                      className="w-full rounded-xl border border-border bg-muted pl-9 pr-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+                    />
+                  </div>
+                </div>
+                {dish.trim() && (
+                  <p className="text-xs text-muted-foreground bg-muted rounded-lg px-3 py-2 leading-relaxed">
+                    <span className="text-foreground/60">Prompt: </span>
+                    {dish.trim()}{price.trim() ? `, precio ${price.trim()} Bs` : ""}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Size + Styles */}
