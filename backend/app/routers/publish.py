@@ -104,55 +104,66 @@ async def generate_via_n8n(
         async with httpx.AsyncClient(timeout=120) as client:
             res = await client.post(_n8n_img_url(), json=body)
             res.raise_for_status()
-            data = res.json()
     except httpx.HTTPError as e:
         raise HTTPException(502, f"Error del webhook n8n: {str(e)}")
 
     image_url = None
     data_uri = None
+    image_bytes: bytes | None = None
+    mime = "image/jpeg"
 
-    # Respuesta base64 del webhook (formato actual de n8n)
-    raw_b64 = data.get("imagen_base64")
-    formato = data.get("formato")  # "data:image/jpeg;base64,..."
-    mime = data.get("mime_type", "image/jpeg")
+    content_type = res.headers.get("content-type", "")
 
-    if raw_b64 or formato:
+    if content_type.startswith("image/"):
+        # n8n devuelve binario directamente
+        image_bytes = res.content
+        mime = content_type.split(";")[0].strip()
+    else:
+        # n8n devuelve JSON con base64
         try:
-            b64_str = raw_b64 or formato.split(",", 1)[1]
-            # Strip data URI prefix if n8n already embeds it in the base64 field
-            if isinstance(b64_str, str) and b64_str.startswith("data:"):
-                b64_str = b64_str.split(",", 1)[1]
-            image_bytes = base64.b64decode(b64_str)
+            data = res.json()
+        except Exception:
+            raise HTTPException(502, "Respuesta inesperada del webhook n8n")
 
-            # Detectar formato real desde los bytes (ignora el mime_type de n8n que puede ser incorrecto)
-            if image_bytes[:8] == b'\x89PNG\r\n\x1a\n':
-                mime = "image/png"
-                ext = "png"
-            elif image_bytes[:3] == b'\xff\xd8\xff':
-                mime = "image/jpeg"
-                ext = "jpg"
-            else:
-                ext = "jpg" if "jpeg" in mime else mime.split("/")[-1]
+        raw_b64 = data.get("imagen_base64")
+        formato = data.get("formato")  # "data:image/jpeg;base64,..."
+        mime = data.get("mime_type", "image/jpeg")
 
-            # Re-encodear desde los bytes para garantizar base64 limpio (sin saltos de línea)
-            b64_clean = base64.b64encode(image_bytes).decode()
-            data_uri = f"data:{mime};base64,{b64_clean}"
+        if raw_b64 or formato:
+            try:
+                b64_str = raw_b64 or formato.split(",", 1)[1]
+                if isinstance(b64_str, str) and b64_str.startswith("data:"):
+                    b64_str = b64_str.split(",", 1)[1]
+                image_bytes = base64.b64decode(b64_str)
+            except Exception:
+                pass
+        else:
+            # Fallback para respuestas con URL directa
+            image_url = (
+                data.get("image_url") or data.get("url") or data.get("output") or
+                (data.get("result") or {}).get("image") or data.get("data", {}).get("url")
+            )
 
-            # Guardar en storage para persistencia
+    if image_bytes:
+        # Detectar formato real desde los magic bytes
+        if image_bytes[:8] == b'\x89PNG\r\n\x1a\n':
+            mime, ext = "image/png", "png"
+        elif image_bytes[:3] == b'\xff\xd8\xff':
+            mime, ext = "image/jpeg", "jpg"
+        else:
+            ext = "png" if "png" in mime else "jpg"
+
+        b64_clean = base64.b64encode(image_bytes).decode()
+        data_uri = f"data:{mime};base64,{b64_clean}"
+
+        try:
             storage = get_storage()
             pub_id = payload.get("publication_id", str(uuid_lib.uuid4()))
             path = generate_image_path(pub_id, extension=ext)
             await storage.upload(image_bytes, path, content_type=mime)
             image_url = storage.get_url(path)
         except Exception:
-            # Si el storage falla, el data_uri sigue sirviendo para el preview
             image_url = data_uri
-    else:
-        # Fallback para respuestas con URL directa
-        image_url = (
-            data.get("image_url") or data.get("url") or data.get("output") or
-            (data.get("result") or {}).get("image") or data.get("data", {}).get("url")
-        )
 
     if payload.get("publication_id"):
         result = await db.execute(
