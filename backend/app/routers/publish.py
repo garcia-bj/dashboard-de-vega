@@ -209,7 +209,7 @@ async def save_to_gallery(
             raise HTTPException(502, f"Error al guardar imagen: {str(e)}")
 
     ai_model = AImodel.OPENAI if model_id == "openai" else AImodel.GEMINI
-    title = (prompt[:60] + "...") if len(prompt) > 60 else prompt or "Imagen generada"
+    title = datetime.utcnow().strftime("%d/%m/%Y %H:%M")
 
     pub = Publication(
         user_id=current_user.id,

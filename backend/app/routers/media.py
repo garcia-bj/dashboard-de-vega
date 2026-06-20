@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, Response
 from pathlib import Path
 from app.config import get_settings
 
@@ -13,8 +13,9 @@ async def serve_media(file_path: str):
         import aioboto3
         from botocore.config import Config as BotoConfig
 
-        # Use public URL as endpoint so presigned URLs are browser-accessible
-        endpoint = settings.STORAGE_S3_PUBLIC_URL or settings.STORAGE_S3_ENDPOINT
+        # Proxy the file through the backend so no presigned-URL validation issues arise.
+        # Use the internal endpoint for backend→S3 traffic.
+        endpoint = settings.STORAGE_S3_ENDPOINT or settings.STORAGE_S3_PUBLIC_URL
         session = aioboto3.Session()
         try:
             async with session.client(
@@ -25,12 +26,10 @@ async def serve_media(file_path: str):
                 aws_secret_access_key=settings.STORAGE_S3_SECRET_KEY,
                 config=BotoConfig(signature_version="s3v4", s3={"addressing_style": "path"}),
             ) as s3:
-                presigned = await s3.generate_presigned_url(
-                    "get_object",
-                    Params={"Bucket": settings.STORAGE_S3_BUCKET, "Key": file_path},
-                    ExpiresIn=3600,
-                )
-            return RedirectResponse(url=presigned, status_code=302)
+                obj = await s3.get_object(Bucket=settings.STORAGE_S3_BUCKET, Key=file_path)
+                body = await obj["Body"].read()
+                content_type = obj.get("ContentType", "image/jpeg")
+            return Response(content=body, media_type=content_type)
         except Exception as e:
             raise HTTPException(status_code=404, detail=f"Archivo no encontrado: {e}")
 
