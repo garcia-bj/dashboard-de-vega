@@ -15,7 +15,7 @@ import {
 import {
   Sparkles, Wand2, ImageIcon,
   RefreshCw, X, CheckCircle2, AlertCircle,
-  SlidersHorizontal, Eye, Loader2, Settings, Clock, Zap, UtensilsCrossed, Tag,
+  SlidersHorizontal, Eye, Loader2, Settings, Clock, Zap, UtensilsCrossed, Plus, Trash2,
 } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -52,8 +52,7 @@ export default function GeneratePage() {
   const [size, setSize] = useState(models[0].sizes[2]);
   const [selStyles, setSelStyles] = useState<string[]>([]);
   const [mode, setMode] = useState<"libre" | "personalizado">("libre");
-  const [dish, setDish] = useState("");
-  const [price, setPrice] = useState("");
+  const [dishes, setDishes] = useState([{ id: 1, name: "", price: "" }]);
   const [generating, setGenerating] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -118,10 +117,16 @@ export default function GeneratePage() {
     }
   };
 
+  const addDish = () => setDishes((d) => [...d, { id: Date.now(), name: "", price: "" }]);
+  const removeDish = (id: number) => setDishes((d) => d.filter((x) => x.id !== id));
+  const updateDish = (id: number, field: "name" | "price", value: string) =>
+    setDishes((d) => d.map((x) => (x.id === id ? { ...x, [field]: value } : x)));
+
   const getEffectivePrompt = () => {
     if (mode === "personalizado") {
-      if (!dish.trim()) return "";
-      return `${dish.trim()}${price.trim() ? `, precio ${price.trim()} Bs` : ""}`;
+      const filled = dishes.filter((d) => d.name.trim());
+      if (!filled.length) return "";
+      return filled.map((d) => `${d.name.trim()}${d.price.trim() ? ` a ${d.price.trim()} Bs` : ""}`).join(", ");
     }
     return prompt.trim();
   };
@@ -129,7 +134,7 @@ export default function GeneratePage() {
   const handleGenerate = async () => {
     const effectivePrompt = getEffectivePrompt();
     if (!effectivePrompt) {
-      return toast.error(mode === "personalizado" ? "Escribe el nombre del plato" : "Escribe un prompt");
+      return toast.error(mode === "personalizado" ? "Agrega al menos un plato" : "Escribe un prompt");
     }
     const token = useAuthStore.getState().token || localStorage.getItem("token");
     if (!token) { toast.error("Sesión expirada"); return; }
@@ -173,7 +178,7 @@ export default function GeneratePage() {
         model: model.id,
       }, token);
       toast.success("Imagen guardada en galería");
-      setResult(null); setStorageUrl(null); setPrompt(""); setDish(""); setPrice(""); setSelStyles([]);
+      setResult(null); setStorageUrl(null); setPrompt(""); setDishes([{ id: 1, name: "", price: "" }]); setSelStyles([]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Error al guardar");
     } finally { setSaving(false); }
@@ -289,36 +294,56 @@ export default function GeneratePage() {
               </>
             ) : (
               <div className="space-y-3">
-                <div>
-                  <label className={fieldLabel}>Plato / Producto</label>
-                  <div className="relative">
-                    <UtensilsCrossed size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                      type="text"
-                      value={dish}
-                      onChange={(e) => setDish(e.target.value)}
-                      placeholder="Ej: Churrasco a la parrilla"
-                      className="w-full rounded-xl border border-border bg-muted pl-9 pr-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
-                    />
-                  </div>
+                {/* Column headers */}
+                <div className="grid grid-cols-[1fr_120px_32px] gap-2 px-1">
+                  <span className="text-xs font-semibold text-foreground/60 flex items-center gap-1.5">
+                    <UtensilsCrossed size={11} /> Plato / Producto
+                  </span>
+                  <span className="text-xs font-semibold text-foreground/60">Precio (Bs)</span>
+                  <span />
                 </div>
-                <div>
-                  <label className={fieldLabel}>Precio</label>
-                  <div className="relative">
-                    <Tag size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                      type="text"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                      placeholder="Ej: 85"
-                      className="w-full rounded-xl border border-border bg-muted pl-9 pr-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
-                    />
-                  </div>
+
+                {/* Rows */}
+                <div className="space-y-2">
+                  {dishes.map((row, idx) => (
+                    <div key={row.id} className="grid grid-cols-[1fr_120px_32px] gap-2 items-center">
+                      <input
+                        type="text"
+                        value={row.name}
+                        onChange={(e) => updateDish(row.id, "name", e.target.value)}
+                        placeholder={idx === 0 ? "Ej: Churrasco a la parrilla" : "Nombre del plato"}
+                        className="w-full rounded-xl border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+                      />
+                      <input
+                        type="text"
+                        value={row.price}
+                        onChange={(e) => updateDish(row.id, "price", e.target.value)}
+                        placeholder="Ej: 85"
+                        className="w-full rounded-xl border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+                      />
+                      <button
+                        onClick={() => { if (dishes.length > 1) removeDish(row.id); else { updateDish(row.id, "name", ""); updateDish(row.id, "price", ""); } }}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
+                        title="Eliminar fila"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
-                {dish.trim() && (
+
+                {/* Add row */}
+                <button
+                  onClick={addDish}
+                  className="w-full h-8 rounded-xl border border-dashed border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Plus size={12} /> Agregar plato
+                </button>
+
+                {/* Prompt preview */}
+                {getEffectivePrompt() && (
                   <p className="text-xs text-muted-foreground bg-muted rounded-lg px-3 py-2 leading-relaxed">
-                    <span className="text-foreground/60">Prompt: </span>
-                    {dish.trim()}{price.trim() ? `, precio ${price.trim()} Bs` : ""}
+                    <span className="text-foreground/50">Prompt: </span>{getEffectivePrompt()}
                   </p>
                 )}
               </div>
