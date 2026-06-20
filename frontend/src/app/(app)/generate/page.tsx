@@ -420,7 +420,7 @@ export default function GeneratePage() {
             </button>
             <button
               onClick={handleGenerate}
-              disabled={generating || !prompt.trim() || !logo || !referenceImage}
+              disabled={generating || !getEffectivePrompt() || !logo || !referenceImage}
               className="flex-1 h-10 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(342 62% 36%))" }}
             >
