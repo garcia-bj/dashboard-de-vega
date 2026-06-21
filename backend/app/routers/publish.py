@@ -355,7 +355,7 @@ async def publish_publication(
                 if acc.provider.value == "instagram":
                     account = acc
                     break
-            elif target == PublishTarget.FACEBOOK_FEED:
+            elif target in (PublishTarget.FACEBOOK_FEED, PublishTarget.FACEBOOK_STORY):
                 if acc.provider.value == "facebook":
                     account = acc
                     break
@@ -366,7 +366,7 @@ async def publish_publication(
 
         # Auto-resolve Page Access Token for Facebook if the stored token is a User Token.
         # This is a transparent fix for accounts saved before auto-exchange was added.
-        if target == PublishTarget.FACEBOOK_FEED:
+        if target in (PublishTarget.FACEBOOK_FEED, PublishTarget.FACEBOOK_STORY):
             try:
                 pages = await meta_service.get_pages(account.access_token)
                 page = next((p for p in pages if str(p.get("id")) == str(account.page_id)), None)
@@ -393,6 +393,10 @@ async def publish_publication(
                     meta_result = await meta_service.publish_to_feed(
                         account.page_id, account.access_token, pub.image_url, pub.caption or ""
                     )
+            elif target == PublishTarget.FACEBOOK_STORY:
+                meta_result = await meta_service.publish_to_facebook_story(
+                    account.page_id, account.access_token, pub.image_url
+                )
             elif target == PublishTarget.INSTAGRAM_FEED:
                 ig_id = account.instagram_business_id or account.page_id
                 if is_carousel and len(carousel_images) >= 2:
@@ -435,6 +439,10 @@ async def publish_publication(
 
     pub.status = PublicationStatus.PUBLISHED if any(r["success"] for r in results) else PublicationStatus.FAILED
     pub.published_at = __import__("datetime").datetime.utcnow()
+    # Store publish results in meta_data so the calendar/history can show permalinks
+    existing_meta = dict(pub.meta_data or {})
+    existing_meta["publish_results"] = results
+    pub.meta_data = existing_meta
     await db.flush()
 
     return {"publication_id": str(pub.id), "results": results}

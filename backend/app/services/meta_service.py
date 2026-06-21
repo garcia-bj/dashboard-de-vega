@@ -164,6 +164,28 @@ class MetaService:
             "permalink": f"https://www.instagram.com/p/{r.get('id', '').split('_')[0]}/",
         }
 
+    async def publish_to_facebook_story(
+        self, page_id: str, access_token: str, image_url: str
+    ) -> dict:
+        # Upload photo as non-published temporary asset
+        photo = await self._call_graph_api(
+            f"{page_id}/photos", access_token,
+            data={"url": image_url, "published": "false", "temporary": "true"},
+        )
+        photo_id = photo.get("id")
+        if not photo_id:
+            raise Exception("No se pudo subir la foto para la historia de Facebook")
+
+        # Publish as page photo story
+        result = await self._call_graph_api(
+            f"{page_id}/photo_stories", access_token,
+            data={"photo_id": photo_id},
+        )
+        return {
+            "post_id": result.get("id") or photo_id,
+            "permalink": f"https://www.facebook.com/{page_id}",
+        }
+
     async def exchange_token(self, short_lived_token: str) -> dict:
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.get(

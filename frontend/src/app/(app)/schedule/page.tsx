@@ -12,7 +12,7 @@ import {
   Eye, Save, Share2, Facebook, Instagram, ImageIcon,
   Clock, CheckCircle2, Hash, AlignLeft, Loader2, AlertCircle,
   Check, Wand2, Sparkles, Layers, Image as ImageSingle,
-  ArrowLeft, ArrowRight, Zap, Send, ShieldAlert,
+  ArrowLeft, ArrowRight, Zap, Send, ShieldAlert, ExternalLink,
 } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -54,6 +54,7 @@ const statusConfig: Record<string, {
 
 const targetOptions = [
   { value: "facebook_feed",   label: "Facebook Feed",   icon: Facebook,  color: "#1877F2", isFeed: true  },
+  { value: "facebook_story",  label: "Facebook Story",  icon: Facebook,  color: "#0866FF", isFeed: false },
   { value: "instagram_feed",  label: "Instagram Feed",  icon: Instagram, color: "#E4405F", isFeed: true  },
   { value: "instagram_story", label: "Instagram Story", icon: Instagram, color: "#C13584", isFeed: false },
 ];
@@ -84,6 +85,7 @@ export default function SchedulePage() {
   const [scheduleTime, setScheduleTime] = useState("");
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [publishResults, setPublishResults] = useState<{ target: string; success: boolean; permalink?: string; error?: string }[] | null>(null);
   const [enhancingCaption, setEnhancingCaption] = useState(false);
   const [generatingHashtags, setGeneratingHashtags] = useState(false);
 
@@ -146,6 +148,7 @@ export default function SchedulePage() {
     setSelectedPubs([]);
     setCaption(""); setHashtags(""); setTargets([]);
     setScheduleDate(""); setScheduleTime("");
+    setPublishResults(null);
   };
 
   // Carousel reorder
@@ -221,7 +224,8 @@ export default function SchedulePage() {
       const accounts = await api.publish.validateAccounts(token!);
       const active = accounts.filter((a) => a.is_active);
       const missing: string[] = [];
-      if (targets.includes("facebook_feed") && !active.some((a) => a.provider === "facebook"))
+      if ((targets.includes("facebook_feed") || targets.includes("facebook_story")) &&
+          !active.some((a) => a.provider === "facebook"))
         missing.push("Facebook");
       if ((targets.includes("instagram_feed") || targets.includes("instagram_story")) &&
           !active.some((a) => a.provider === "instagram"))
@@ -281,14 +285,15 @@ export default function SchedulePage() {
       const result = await api.publish.publish(primaryPub!.id, token!);
       const successes = result.results.filter((r) => r.success);
       const failures  = result.results.filter((r) => !r.success);
+      setPublishResults(result.results);
 
       if (successes.length > 0) {
-        toast.success(`Publicado en ${successes.length} plataforma${successes.length > 1 ? "s" : ""} ✓`);
+        toast.success(`Publicado en ${successes.length} plataforma${successes.length > 1 ? "s" : ""}`);
       }
       if (failures.length > 0) {
         failures.forEach((f) => toast.error(`Error en ${f.target}: ${f.error}`));
       }
-      handleClear();
+      // Don't clear — show results panel with permalink links
       if (token) loadGallery(token);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Error al publicar");
@@ -616,6 +621,27 @@ export default function SchedulePage() {
                 className="w-full rounded-xl border border-border bg-muted px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors" />
             </div>
           </div>
+
+          {/* Resultado de publicación */}
+          {publishResults && (
+            <div className="rounded-xl border border-border bg-muted/60 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-foreground">Resultado de publicación</p>
+                <button onClick={() => setPublishResults(null)} className="text-muted-foreground hover:text-foreground transition-colors"><X size={12} /></button>
+              </div>
+              {publishResults.map((r) => (
+                <div key={r.target} className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs ${r.success ? "bg-emerald-500/10 text-emerald-400" : "bg-destructive/10 text-destructive"}`}>
+                  <span className="font-medium capitalize">{r.target.replace(/_/g, " ")}</span>
+                  {r.permalink
+                    ? <a href={r.permalink} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1 hover:underline font-semibold">
+                        Ver publicación <ExternalLink size={10} />
+                      </a>
+                    : <span>{r.success ? "Publicado" : r.error?.slice(0, 40)}</span>}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Botones de acción */}
           <div className="flex gap-2">

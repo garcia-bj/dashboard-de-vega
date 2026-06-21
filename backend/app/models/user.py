@@ -71,6 +71,7 @@ class PublicationStatus(str, enum.Enum):
 
 class PublishTarget(str, enum.Enum):
     FACEBOOK_FEED = "facebook_feed"
+    FACEBOOK_STORY = "facebook_story"
     INSTAGRAM_FEED = "instagram_feed"
     INSTAGRAM_STORY = "instagram_story"
 

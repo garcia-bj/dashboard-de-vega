@@ -49,6 +49,14 @@ export interface TokenOut {
   user: UserOut;
 }
 
+export interface PublishResult {
+  target: string;
+  success: boolean;
+  post_id?: string;
+  permalink?: string;
+  error?: string;
+}
+
 export interface PublicationOut {
   id: string;
   title: string;
@@ -61,7 +69,12 @@ export interface PublicationOut {
   scheduled_at: string;
   published_at: string | null;
   created_at: string;
-  meta_data: Record<string, unknown> | null;
+  meta_data: {
+    carousel?: boolean;
+    carousel_images?: string[];
+    publish_results?: PublishResult[];
+    [key: string]: unknown;
+  } | null;
 }
 
 export interface SocialAccountOut {

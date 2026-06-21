@@ -9,17 +9,18 @@ import { useAuthStore } from "@/store/auth";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard, Wand2, Calendar, ImageIcon, Settings,
+  LayoutDashboard, Wand2, Calendar, CalendarDays, ImageIcon, Settings,
   Bell, PanelLeftClose, PanelLeftOpen,
   User, LogOut, LifeBuoy, Menu, Search,
 } from "lucide-react";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
-  { icon: Wand2, label: "Generar", href: "/generate" },
-  { icon: Calendar, label: "Programar", href: "/schedule" },
-  { icon: ImageIcon, label: "Galería", href: "/media" },
-  { icon: Settings, label: "Configuración", href: "/settings" },
+  { icon: LayoutDashboard, label: "Dashboard",   href: "/dashboard" },
+  { icon: Wand2,           label: "Generar",     href: "/generate" },
+  { icon: Calendar,        label: "Programar",   href: "/schedule" },
+  { icon: CalendarDays,    label: "Calendario",  href: "/calendar" },
+  { icon: ImageIcon,       label: "Galería",     href: "/media" },
+  { icon: Settings,        label: "Configuración", href: "/settings" },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
