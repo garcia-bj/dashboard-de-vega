@@ -24,6 +24,19 @@ class MetaService:
             else:
                 response = await client.get(url, params={**params, **(data or {})})
 
+            if response.status_code == 403:
+                try:
+                    err = response.json()
+                    fb_msg = err.get("error", {}).get("message", "")
+                except Exception:
+                    fb_msg = ""
+                raise Exception(
+                    f"403 Forbidden de Meta API — el token no tiene permisos suficientes o "
+                    f"es un User Token en vez de Page Token. "
+                    f"Solución: ve a Configuración → Redes Sociales, elimina la cuenta y vuelve a guardar tu token. "
+                    f"Detalle: {fb_msg}"
+                )
+
             response.raise_for_status()
             return response.json()
 

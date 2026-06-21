@@ -364,6 +364,20 @@ async def publish_publication(
             results.append({"target": target_str, "success": False, "error": "Cuenta no vinculada"})
             continue
 
+        # Auto-resolve Page Access Token for Facebook if the stored token is a User Token.
+        # This is a transparent fix for accounts saved before auto-exchange was added.
+        if target == PublishTarget.FACEBOOK_FEED:
+            try:
+                pages = await meta_service.get_pages(account.access_token)
+                page = next((p for p in pages if str(p.get("id")) == str(account.page_id)), None)
+                if page and page.get("access_token"):
+                    resolved_token = page["access_token"]
+                    if resolved_token != account.access_token:
+                        account.access_token = resolved_token
+                        await db.flush()
+            except Exception:
+                pass  # keep stored token
+
         # Detect carousel
         pub_meta = pub.meta_data or {}
         is_carousel = pub_meta.get("carousel") and pub_meta.get("carousel_images")
