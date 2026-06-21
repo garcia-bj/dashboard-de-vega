@@ -18,7 +18,8 @@ from app.config import get_settings
 settings = get_settings()
 router = APIRouter(prefix="/api/publish", tags=["publish"])
 
-GEMINI_TEXT_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+OPENAI_TEXT_URL = "https://api.openai.com/v1/chat/completions"
+OPENAI_MODEL = "gpt-4o-mini"
 
 ENHANCE_SYSTEM = (
     "Eres un experto en prompts para generación de imágenes con IA. "
@@ -51,6 +52,29 @@ def _n8n_img_url() -> str:
     return settings.N8N_IMG_GENERATION_URL or f"{settings.N8N_WEBHOOK_URL}{settings.N8N_IMAGE_GEN_WEBHOOK}"
 
 
+async def _call_openai(system: str, user_text: str) -> str:
+    api_key = settings.OPENAI_API_KEY
+    if not api_key:
+        raise HTTPException(400, "OpenAI API Key no configurada en el servidor")
+    async with httpx.AsyncClient(timeout=30) as client:
+        res = await client.post(
+            OPENAI_TEXT_URL,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={
+                "model": OPENAI_MODEL,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user_text},
+                ],
+                "max_tokens": 512,
+                "temperature": 0.75,
+            },
+        )
+        res.raise_for_status()
+        data = res.json()
+    return data["choices"][0]["message"]["content"].strip()
+
+
 @router.post("/enhance-prompt")
 async def enhance_prompt(
     payload: dict,
@@ -60,53 +84,18 @@ async def enhance_prompt(
     if not prompt:
         raise HTTPException(400, "El prompt no puede estar vacío")
 
-    meta = current_user.meta_data or {}
-    api_key = meta.get("api_key_gemini") or settings.GEMINI_API_KEY
-    if not api_key:
-        raise HTTPException(400, "Configurá tu Gemini API Key en Configuración para usar el mejorador de prompts")
-
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            res = await client.post(
-                GEMINI_TEXT_URL,
-                params={"key": api_key},
-                json={
-                    "system_instruction": {"parts": [{"text": ENHANCE_SYSTEM}]},
-                    "contents": [{"parts": [{"text": prompt}]}],
-                    "generationConfig": {"temperature": 0.7, "maxOutputTokens": 512},
-                },
-            )
-            res.raise_for_status()
-            data = res.json()
+        enhanced = await _call_openai(ENHANCE_SYSTEM, prompt)
+    except HTTPException:
+        raise
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 429:
-            raise HTTPException(429, "Límite de uso de Gemini alcanzado. Esperá unos segundos e intentá de nuevo.")
-        raise HTTPException(502, "Error al conectar con Gemini")
-    except httpx.HTTPError:
-        raise HTTPException(502, "Error al conectar con Gemini")
-
-    try:
-        enhanced = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-    except (KeyError, IndexError):
-        raise HTTPException(502, "Respuesta inesperada de Gemini")
+            raise HTTPException(429, "Límite de uso de OpenAI alcanzado. Esperá unos segundos.")
+        raise HTTPException(502, f"Error de OpenAI: {e.response.text[:200]}")
+    except (httpx.HTTPError, KeyError, IndexError):
+        raise HTTPException(502, "Error al conectar con OpenAI")
 
     return {"enhanced_prompt": enhanced}
-
-
-async def _call_gemini(api_key: str, system: str, user_text: str) -> str:
-    async with httpx.AsyncClient(timeout=30) as client:
-        res = await client.post(
-            GEMINI_TEXT_URL,
-            params={"key": api_key},
-            json={
-                "system_instruction": {"parts": [{"text": system}]},
-                "contents": [{"parts": [{"text": user_text}]}],
-                "generationConfig": {"temperature": 0.75, "maxOutputTokens": 512},
-            },
-        )
-        res.raise_for_status()
-        data = res.json()
-    return data["candidates"][0]["content"]["parts"][0]["text"].strip()
 
 
 @router.post("/enhance-caption")
@@ -114,13 +103,8 @@ async def enhance_caption(
     payload: dict,
     current_user: User = Depends(get_current_user),
 ):
-    meta = current_user.meta_data or {}
-    api_key = meta.get("api_key_gemini") or settings.GEMINI_API_KEY
-    if not api_key:
-        raise HTTPException(400, "Configurá tu Gemini API Key en Configuración")
-
     caption = payload.get("caption", "").strip()
-    context = payload.get("context", "").strip()  # platos, precios, etc.
+    context = payload.get("context", "").strip()
     mode = payload.get("mode", "caption")  # "caption" | "hashtags" | "both"
     hashtag_count = int(payload.get("hashtag_count", 12))
 
@@ -130,17 +114,43 @@ async def enhance_caption(
     result: dict = {}
     try:
         if mode in ("caption", "both"):
-            result["enhanced_caption"] = await _call_gemini(api_key, CAPTION_SYSTEM, user_text_caption)
+            result["enhanced_caption"] = await _call_openai(CAPTION_SYSTEM, user_text_caption)
         if mode in ("hashtags", "both"):
-            result["hashtags"] = await _call_gemini(api_key, HASHTAG_SYSTEM, user_text_hashtags)
+            result["hashtags"] = await _call_openai(HASHTAG_SYSTEM, user_text_hashtags)
+    except HTTPException:
+        raise
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 429:
-            raise HTTPException(429, "Límite de uso de Gemini alcanzado. Esperá unos segundos.")
-        raise HTTPException(502, "Error al conectar con Gemini")
+            raise HTTPException(429, "Límite de uso de OpenAI alcanzado. Esperá unos segundos.")
+        raise HTTPException(502, "Error al conectar con OpenAI")
     except (httpx.HTTPError, KeyError, IndexError):
-        raise HTTPException(502, "Error al conectar con Gemini")
+        raise HTTPException(502, "Error al conectar con OpenAI")
 
     return result
+
+
+@router.get("/validate-accounts")
+async def validate_accounts(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Devuelve las cuentas activas del usuario para validar antes de publicar."""
+    result = await db.execute(
+        select(SocialAccount).where(
+            SocialAccount.user_id == current_user.id,
+            SocialAccount.is_active == True,
+        )
+    )
+    accounts = result.scalars().all()
+    return [
+        {
+            "id": str(acc.id),
+            "provider": acc.provider.value,
+            "page_name": acc.page_name,
+            "is_active": acc.is_active,
+        }
+        for acc in accounts
+    ]
 
 
 @router.post("/generate")

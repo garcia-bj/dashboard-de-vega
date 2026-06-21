@@ -167,8 +167,12 @@ export const api = {
     saveToGallery: (data: { image_url?: string | null; data_uri?: string | null; prompt: string; model: string }, token: string) =>
       request<{ id: string; image_url: string }>("/api/publish/save-to-gallery", { method: "POST", body: data, token }),
     publish: (publicationId: string, token: string) =>
-      request<unknown>(`/api/publish/publication/${publicationId}`, { method: "POST", token }),
+      request<{ publication_id: string; results: { target: string; success: boolean; post_id?: string; permalink?: string; error?: string }[] }>(
+        `/api/publish/publication/${publicationId}`, { method: "POST", token }
+      ),
     enhanceCaption: (data: { caption?: string; context?: string; mode: "caption" | "hashtags" | "both"; hashtag_count?: number }, token: string) =>
       request<{ enhanced_caption?: string; hashtags?: string }>("/api/publish/enhance-caption", { method: "POST", body: data, token }),
+    validateAccounts: (token: string) =>
+      request<{ id: string; provider: string; page_name: string; is_active: boolean }[]>("/api/publish/validate-accounts", { token }),
   },
 };

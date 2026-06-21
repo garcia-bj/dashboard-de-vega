@@ -12,7 +12,7 @@ import {
   Eye, Save, Share2, Facebook, Instagram, ImageIcon,
   Clock, CheckCircle2, Hash, AlignLeft, Loader2, AlertCircle,
   Check, Wand2, Sparkles, Layers, Image as ImageSingle,
-  ArrowLeft, ArrowRight, Zap,
+  ArrowLeft, ArrowRight, Zap, Send, ShieldAlert,
 } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -83,6 +83,7 @@ export default function SchedulePage() {
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleTime, setScheduleTime] = useState("");
   const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [enhancingCaption, setEnhancingCaption] = useState(false);
   const [generatingHashtags, setGeneratingHashtags] = useState(false);
 
@@ -193,41 +194,65 @@ export default function SchedulePage() {
     } finally { setGeneratingHashtags(false); }
   };
 
-  // ── Submit ──
-  const handleSchedule = async () => {
-    if (!primaryPub) return toast.error("Selecciona al menos una imagen");
-    if (pubType === "carousel" && selectedPubs.length < 2)
-      return toast.error("El carrusel necesita al menos 2 imágenes");
-    if (!targets.length) return toast.error("Selecciona al menos una plataforma");
-    if (!scheduleDate || !scheduleTime) return toast.error("Selecciona fecha y hora");
-
+  // ── Helpers ──
+  const buildFinalCaption = () => {
     const hashtagsStr = hashtags.trim()
-      ? hashtags.trim().startsWith("#")
-        ? hashtags.trim()
-        : "#" + hashtags.trim().replace(/\s+/g, " #")
+      ? hashtags.trim().startsWith("#") ? hashtags.trim() : "#" + hashtags.trim().replace(/\s+/g, " #")
       : "";
-    const finalCaption = hasFeedTarget && hashtagsStr
+    return hasFeedTarget && hashtagsStr
       ? `${caption.trim()}${caption.trim() ? "\n\n" : ""}${hashtagsStr}`
       : caption.trim();
+  };
 
-    const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}`).toISOString();
+  const buildMetaData = (): Record<string, unknown> =>
+    pubType === "carousel"
+      ? { carousel: true, carousel_images: selectedPubs.map((p) => toAbsoluteUrl(p.image_url!)) }
+      : {};
 
-    const metaData: Record<string, unknown> =
-      pubType === "carousel"
-        ? {
-            carousel: true,
-            carousel_images: selectedPubs.map((p) => toAbsoluteUrl(p.image_url!)),
-          }
-        : {};
+  const validateForm = () => {
+    if (!primaryPub) { toast.error("Selecciona al menos una imagen"); return false; }
+    if (pubType === "carousel" && selectedPubs.length < 2) { toast.error("El carrusel necesita al menos 2 imágenes"); return false; }
+    if (!targets.length) { toast.error("Selecciona al menos una plataforma"); return false; }
+    return true;
+  };
+
+  const checkMetaAccounts = async (): Promise<boolean> => {
+    try {
+      const accounts = await api.publish.validateAccounts(token!);
+      const active = accounts.filter((a) => a.is_active);
+      const missing: string[] = [];
+      if (targets.includes("facebook_feed") && !active.some((a) => a.provider === "facebook"))
+        missing.push("Facebook");
+      if ((targets.includes("instagram_feed") || targets.includes("instagram_story")) &&
+          !active.some((a) => a.provider === "instagram"))
+        missing.push("Instagram");
+      if (missing.length > 0) {
+        toast.error(
+          `Cuenta${missing.length > 1 ? "s" : ""} de ${missing.join(" e ")} no conectada${missing.length > 1 ? "s" : ""}. Configúrala en Configuración → Redes Sociales.`,
+          { duration: 6000, icon: <ShieldAlert size={16} /> }
+        );
+        return false;
+      }
+      return true;
+    } catch {
+      toast.error("No se pudo verificar las cuentas de Meta");
+      return false;
+    }
+  };
+
+  // ── Submit ──
+  const handleSchedule = async () => {
+    if (!validateForm()) return;
+    if (!scheduleDate || !scheduleTime) return toast.error("Selecciona fecha y hora");
 
     setSaving(true);
     try {
-      await api.publications.update(primaryPub.id, {
-        caption: finalCaption || null,
+      await api.publications.update(primaryPub!.id, {
+        caption: buildFinalCaption() || null,
         targets,
-        scheduled_at: scheduledAt,
+        scheduled_at: new Date(`${scheduleDate}T${scheduleTime}`).toISOString(),
         status: "scheduled",
-        meta_data: metaData,
+        meta_data: buildMetaData(),
       }, token!);
       toast.success(pubType === "carousel" ? "Carrusel programado" : "Publicación programada");
       handleClear();
@@ -235,6 +260,39 @@ export default function SchedulePage() {
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Error al programar");
     } finally { setSaving(false); }
+  };
+
+  const handlePublishNow = async () => {
+    if (!validateForm()) return;
+    const ok = await checkMetaAccounts();
+    if (!ok) return;
+
+    setPublishing(true);
+    try {
+      // Save caption/targets first
+      await api.publications.update(primaryPub!.id, {
+        caption: buildFinalCaption() || null,
+        targets,
+        meta_data: buildMetaData(),
+        status: "generated",
+      }, token!);
+
+      // Then publish immediately
+      const result = await api.publish.publish(primaryPub!.id, token!);
+      const successes = result.results.filter((r) => r.success);
+      const failures  = result.results.filter((r) => !r.success);
+
+      if (successes.length > 0) {
+        toast.success(`Publicado en ${successes.length} plataforma${successes.length > 1 ? "s" : ""} ✓`);
+      }
+      if (failures.length > 0) {
+        failures.forEach((f) => toast.error(`Error en ${f.target}: ${f.error}`));
+      }
+      handleClear();
+      if (token) loadGallery(token);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error al publicar");
+    } finally { setPublishing(false); }
   };
 
   // ── Pagination ──
@@ -559,25 +617,99 @@ export default function SchedulePage() {
             </div>
           </div>
 
-          {/* Submit */}
-          <button
-            onClick={handleSchedule}
-            disabled={saving || !primaryPub || !targets.length || !scheduleDate || !scheduleTime
-              || (pubType === "carousel" && selectedPubs.length < 2)}
-            className="w-full h-10 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(342 62% 36%))" }}
-          >
-            {saving
-              ? <><Loader2 size={15} className="animate-spin" /> Programando...</>
-              : pubType === "carousel"
-                ? <><Layers size={15} /> Programar Carrusel ({selectedPubs.length} imágenes)</>
-                : <><Save size={15} /> Programar Publicación</>}
-          </button>
+          {/* Botones de acción */}
+          <div className="flex gap-2">
+            {/* Publicar Ahora */}
+            <button
+              onClick={handlePublishNow}
+              disabled={publishing || saving || !primaryPub || !targets.length
+                || (pubType === "carousel" && selectedPubs.length < 2)}
+              className="flex-1 h-10 rounded-xl text-sm font-semibold border border-secondary/40 text-secondary hover:bg-secondary/10 flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {publishing
+                ? <><Loader2 size={15} className="animate-spin" /> Publicando...</>
+                : <><Send size={15} /> Publicar Ahora</>}
+            </button>
+            {/* Programar */}
+            <button
+              onClick={handleSchedule}
+              disabled={saving || publishing || !primaryPub || !targets.length || !scheduleDate || !scheduleTime
+                || (pubType === "carousel" && selectedPubs.length < 2)}
+              className="flex-1 h-10 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(342 62% 36%))" }}
+            >
+              {saving
+                ? <><Loader2 size={15} className="animate-spin" /> Programando...</>
+                : pubType === "carousel"
+                  ? <><Layers size={15} /> Programar Carrusel</>
+                  : <><Save size={15} /> Programar</>}
+            </button>
+          </div>
         </div>
       </div>
 
+      {/* ── Panel de estado rápido ── */}
+      {!historyLoading && history.length > 0 && (() => {
+        const now = new Date();
+        const stats = [
+          {
+            label: "Listas para publicar",
+            value: history.filter((p) => p.status === "generated").length,
+            icon: CheckCircle2,
+            color: "text-amber-400",
+            bg: "border-amber-500/20 from-amber-500/10",
+            filter: "generated",
+          },
+          {
+            label: "Programadas",
+            value: history.filter((p) => p.status === "scheduled").length,
+            icon: Clock,
+            color: "text-blue-400",
+            bg: "border-blue-500/20 from-blue-500/10",
+            filter: "scheduled",
+          },
+          {
+            label: "Publicadas hoy",
+            value: history.filter((p) => p.status === "published" && p.published_at && new Date(p.published_at).toDateString() === now.toDateString()).length,
+            icon: CheckCircle2,
+            color: "text-emerald-400",
+            bg: "border-emerald-500/20 from-emerald-500/10",
+            filter: "published",
+          },
+          {
+            label: "Fallidas",
+            value: history.filter((p) => p.status === "failed").length,
+            icon: AlertCircle,
+            color: "text-destructive",
+            bg: "border-destructive/20 from-destructive/10",
+            filter: "failed",
+          },
+        ];
+        return (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {stats.map((s) => (
+              <button
+                key={s.label}
+                onClick={() => { setStatusFilter(s.filter); setHistoryPage(1); document.getElementById("historial")?.scrollIntoView({ behavior: "smooth" }); }}
+                className={cn(
+                  "rounded-2xl border bg-card p-4 text-left hover:border-opacity-80 transition-all relative overflow-hidden",
+                  s.bg.split(" ")[0]
+                )}
+              >
+                <div className={`absolute top-0 left-0 w-full h-1/2 pointer-events-none bg-gradient-to-b ${s.bg.split(" ")[1]} to-transparent`} />
+                <div className="relative z-10">
+                  <s.icon size={16} className={cn("mb-2", s.color)} />
+                  <p className="text-2xl font-bold text-foreground">{s.value}</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">{s.label}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        );
+      })()}
+
       {/* ── Historial ── */}
-      <div className={card}>
+      <div id="historial" className={card}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <h3 className="text-sm font-semibold text-foreground">Historial de Publicaciones</h3>
           <div className="flex flex-wrap gap-1.5">
