@@ -28,6 +28,22 @@ ENHANCE_SYSTEM = (
     "Respondé ÚNICAMENTE con el prompt mejorado en el mismo idioma que el original, sin explicaciones ni texto adicional."
 )
 
+CAPTION_SYSTEM = (
+    "Eres un experto en marketing digital y redes sociales para restaurantes y negocios de comida. "
+    "Tu tarea es mejorar o crear un caption atractivo para un post en redes sociales. "
+    "Usa emojis relevantes (sin exagerar), genera emoción o urgencia, y termina con una llamada a la acción sutil. "
+    "Mantén un tono cálido y apetitoso. "
+    "Respondé ÚNICAMENTE con el caption mejorado, sin explicaciones, sin comillas."
+)
+
+HASHTAG_SYSTEM = (
+    "Eres un experto en marketing digital para restaurantes. "
+    "Genera hashtags relevantes para una publicación de restaurante en Bolivia. "
+    "Mezcla hashtags populares globales con específicos del rubro y del país. "
+    "Respondé ÚNICAMENTE con los hashtags separados por espacios, empezando cada uno con #. "
+    "Sin explicaciones. Sin puntos. Solo hashtags en una sola línea."
+)
+
 meta_service = MetaService()
 
 
@@ -75,6 +91,56 @@ async def enhance_prompt(
         raise HTTPException(502, "Respuesta inesperada de Gemini")
 
     return {"enhanced_prompt": enhanced}
+
+
+async def _call_gemini(api_key: str, system: str, user_text: str) -> str:
+    async with httpx.AsyncClient(timeout=30) as client:
+        res = await client.post(
+            GEMINI_TEXT_URL,
+            params={"key": api_key},
+            json={
+                "system_instruction": {"parts": [{"text": system}]},
+                "contents": [{"parts": [{"text": user_text}]}],
+                "generationConfig": {"temperature": 0.75, "maxOutputTokens": 512},
+            },
+        )
+        res.raise_for_status()
+        data = res.json()
+    return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+
+
+@router.post("/enhance-caption")
+async def enhance_caption(
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+):
+    meta = current_user.meta_data or {}
+    api_key = meta.get("api_key_gemini") or settings.GEMINI_API_KEY
+    if not api_key:
+        raise HTTPException(400, "Configurá tu Gemini API Key en Configuración")
+
+    caption = payload.get("caption", "").strip()
+    context = payload.get("context", "").strip()  # platos, precios, etc.
+    mode = payload.get("mode", "caption")  # "caption" | "hashtags" | "both"
+    hashtag_count = int(payload.get("hashtag_count", 12))
+
+    user_text_caption = f"{context}\n\nCaption actual: {caption}" if caption else context or "Publicación de restaurante"
+    user_text_hashtags = f"Genera {hashtag_count} hashtags para: {context or caption or 'publicación de restaurante'}"
+
+    result: dict = {}
+    try:
+        if mode in ("caption", "both"):
+            result["enhanced_caption"] = await _call_gemini(api_key, CAPTION_SYSTEM, user_text_caption)
+        if mode in ("hashtags", "both"):
+            result["hashtags"] = await _call_gemini(api_key, HASHTAG_SYSTEM, user_text_hashtags)
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 429:
+            raise HTTPException(429, "Límite de uso de Gemini alcanzado. Esperá unos segundos.")
+        raise HTTPException(502, "Error al conectar con Gemini")
+    except (httpx.HTTPError, KeyError, IndexError):
+        raise HTTPException(502, "Error al conectar con Gemini")
+
+    return result
 
 
 @router.post("/generate")
@@ -288,16 +354,31 @@ async def publish_publication(
             results.append({"target": target_str, "success": False, "error": "Cuenta no vinculada"})
             continue
 
+        # Detect carousel
+        pub_meta = pub.meta_data or {}
+        is_carousel = pub_meta.get("carousel") and pub_meta.get("carousel_images")
+        carousel_images: list[str] = pub_meta.get("carousel_images", [])
+
         try:
             if target == PublishTarget.FACEBOOK_FEED:
-                meta_result = await meta_service.publish_to_feed(
-                    account.page_id, account.access_token, pub.image_url, pub.caption or ""
-                )
+                if is_carousel and len(carousel_images) >= 2:
+                    meta_result = await meta_service.publish_carousel_to_feed(
+                        account.page_id, account.access_token, carousel_images, pub.caption or ""
+                    )
+                else:
+                    meta_result = await meta_service.publish_to_feed(
+                        account.page_id, account.access_token, pub.image_url, pub.caption or ""
+                    )
             elif target == PublishTarget.INSTAGRAM_FEED:
-                meta_result = await meta_service.publish_to_instagram(
-                    account.instagram_business_id or account.page_id,
-                    account.access_token, pub.image_url, pub.caption or ""
-                )
+                ig_id = account.instagram_business_id or account.page_id
+                if is_carousel and len(carousel_images) >= 2:
+                    meta_result = await meta_service.publish_carousel_to_instagram(
+                        ig_id, account.access_token, carousel_images, pub.caption or ""
+                    )
+                else:
+                    meta_result = await meta_service.publish_to_instagram(
+                        ig_id, account.access_token, pub.image_url, pub.caption or ""
+                    )
             elif target == PublishTarget.INSTAGRAM_STORY:
                 meta_result = await meta_service.publish_to_story(
                     account.instagram_business_id or account.page_id,

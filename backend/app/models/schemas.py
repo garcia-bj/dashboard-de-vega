@@ -64,6 +64,7 @@ class PublicationUpdate(BaseModel):
     targets: list[PublishTarget] | None = None
     scheduled_at: datetime | None = None
     status: PublicationStatus | None = None
+    meta_data: dict | None = None
 
 
 class PublicationOut(BaseModel):
@@ -78,6 +79,7 @@ class PublicationOut(BaseModel):
     scheduled_at: datetime
     published_at: datetime | None
     created_at: datetime
+    meta_data: dict | None = None
 
     model_config = {"from_attributes": True}
 

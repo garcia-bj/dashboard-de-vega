@@ -61,6 +61,7 @@ export interface PublicationOut {
   scheduled_at: string;
   published_at: string | null;
   created_at: string;
+  meta_data: Record<string, unknown> | null;
 }
 
 export interface SocialAccountOut {
@@ -167,5 +168,7 @@ export const api = {
       request<{ id: string; image_url: string }>("/api/publish/save-to-gallery", { method: "POST", body: data, token }),
     publish: (publicationId: string, token: string) =>
       request<unknown>(`/api/publish/publication/${publicationId}`, { method: "POST", token }),
+    enhanceCaption: (data: { caption?: string; context?: string; mode: "caption" | "hashtags" | "both"; hashtag_count?: number }, token: string) =>
+      request<{ enhanced_caption?: string; hashtags?: string }>("/api/publish/enhance-caption", { method: "POST", body: data, token }),
   },
 };

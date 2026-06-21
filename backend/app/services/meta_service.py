@@ -1,5 +1,6 @@
 from typing import Any
 import httpx
+import json as _json
 from app.config import get_settings
 
 settings = get_settings()
@@ -90,6 +91,64 @@ class MetaService:
         return {
             "post_id": publish.get("id"),
             "permalink": f"https://www.instagram.com/stories/direct/{publish.get('id')}",
+        }
+
+    async def publish_carousel_to_feed(
+        self, page_id: str, access_token: str, image_urls: list[str], caption: str = ""
+    ) -> dict:
+        # 1. Upload each image as an unpublished photo to get photo IDs
+        photo_ids = []
+        for url in image_urls:
+            r = await self._call_graph_api(
+                f"{page_id}/photos", access_token,
+                data={"url": url, "published": "false"},
+            )
+            photo_ids.append(r["id"])
+
+        # 2. Create the carousel feed post with attached media
+        r = await self._call_graph_api(
+            f"{page_id}/feed", access_token,
+            data={
+                "message": caption,
+                "attached_media": _json.dumps([{"media_fbid": pid} for pid in photo_ids]),
+            },
+        )
+        return {
+            "post_id": r.get("id"),
+            "permalink": f"https://www.facebook.com/{r.get('id')}",
+        }
+
+    async def publish_carousel_to_instagram(
+        self, instagram_business_id: str, access_token: str, image_urls: list[str], caption: str = ""
+    ) -> dict:
+        # 1. Create item containers (one per image)
+        children_ids = []
+        for url in image_urls:
+            r = await self._call_graph_api(
+                f"{instagram_business_id}/media", access_token,
+                data={"image_url": url, "is_carousel_item": "true"},
+            )
+            children_ids.append(r["id"])
+
+        # 2. Create carousel container
+        r = await self._call_graph_api(
+            f"{instagram_business_id}/media", access_token,
+            data={
+                "media_type": "CAROUSEL",
+                "caption": caption,
+                "children": ",".join(children_ids),
+            },
+        )
+        carousel_id = r["id"]
+
+        # 3. Publish
+        r = await self._call_graph_api(
+            f"{instagram_business_id}/media_publish", access_token,
+            data={"creation_id": carousel_id},
+        )
+        return {
+            "post_id": r.get("id"),
+            "permalink": f"https://www.instagram.com/p/{r.get('id', '').split('_')[0]}/",
         }
 
     async def exchange_token(self, short_lived_token: str) -> dict:
