@@ -97,8 +97,8 @@ class Publication(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = relationship("User", back_populates="publications")
-    generation_logs = relationship("GenerationLog", back_populates="publication")
-    publish_logs = relationship("PublishLog", back_populates="publication")
+    generation_logs = relationship("GenerationLog", back_populates="publication", cascade="all, delete-orphan", passive_deletes=True)
+    publish_logs = relationship("PublishLog", back_populates="publication", cascade="all, delete-orphan", passive_deletes=True)
 
 
 class GenerationLog(Base):

@@ -383,15 +383,13 @@ async def publish_publication(
 
         # Auto-resolve Page Access Token for Facebook if the stored token is a User Token.
         # This is a transparent fix for accounts saved before auto-exchange was added.
+        resolved_token = account.access_token
         if target in (PublishTarget.FACEBOOK_FEED, PublishTarget.FACEBOOK_STORY):
             try:
                 pages = await meta_service.get_pages(account.access_token)
                 page = next((p for p in pages if str(p.get("id")) == str(account.page_id)), None)
                 if page and page.get("access_token"):
                     resolved_token = page["access_token"]
-                    if resolved_token != account.access_token:
-                        account.access_token = resolved_token
-                        await db.flush()
             except Exception:
                 pass  # keep stored token
 
@@ -407,30 +405,30 @@ async def publish_publication(
             if target == PublishTarget.FACEBOOK_FEED:
                 if is_carousel and len(abs_carousel) >= 2:
                     meta_result = await meta_service.publish_carousel_to_feed(
-                        account.page_id, account.access_token, abs_carousel, pub.caption or ""
+                        account.page_id, resolved_token, abs_carousel, pub.caption or ""
                     )
                 else:
                     meta_result = await meta_service.publish_to_feed(
-                        account.page_id, account.access_token, public_image_url, pub.caption or ""
+                        account.page_id, resolved_token, public_image_url, pub.caption or ""
                     )
             elif target == PublishTarget.FACEBOOK_STORY:
                 meta_result = await meta_service.publish_to_facebook_story(
-                    account.page_id, account.access_token, public_image_url
+                    account.page_id, resolved_token, public_image_url
                 )
             elif target == PublishTarget.INSTAGRAM_FEED:
                 ig_id = account.instagram_business_id or account.page_id
                 if is_carousel and len(abs_carousel) >= 2:
                     meta_result = await meta_service.publish_carousel_to_instagram(
-                        ig_id, account.access_token, abs_carousel, pub.caption or ""
+                        ig_id, resolved_token, abs_carousel, pub.caption or ""
                     )
                 else:
                     meta_result = await meta_service.publish_to_instagram(
-                        ig_id, account.access_token, public_image_url, pub.caption or ""
+                        ig_id, resolved_token, public_image_url, pub.caption or ""
                     )
             elif target == PublishTarget.INSTAGRAM_STORY:
                 meta_result = await meta_service.publish_to_story(
                     account.instagram_business_id or account.page_id,
-                    account.access_token, public_image_url
+                    resolved_token, public_image_url
                 )
             else:
                 continue
