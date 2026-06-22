@@ -440,7 +440,7 @@ export default function GeneratePage() {
               </h3>
               {result && <Badge variant="success" className="gap-1"><CheckCircle2 size={10} />Generado</Badge>}
             </div>
-            <div className="aspect-square rounded-2xl bg-muted border border-border flex items-center justify-center overflow-hidden">
+            <div className="rounded-2xl bg-muted border border-border flex items-center justify-center overflow-hidden min-h-[280px]">
               <AnimatePresence mode="wait">
                 {generating ? (
                   <motion.div key="load" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center gap-5 w-full px-8">
@@ -465,7 +465,7 @@ export default function GeneratePage() {
                 ) : result ? (
                   <motion.img key="img" src={result} alt="Generated"
                     initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-                    className="w-full h-full object-cover" />
+                    className="w-full h-auto object-contain rounded-2xl" />
                 ) : error ? (
                   <motion.div key="err" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-2 px-6 text-center">
                     <AlertCircle size={36} className="text-destructive/40" />

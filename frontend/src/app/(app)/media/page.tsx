@@ -93,6 +93,9 @@ export default function MediaPage() {
     }
   };
 
+  const [deletingAll, setDeletingAll] = useState(false);
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+
   const handleDelete = async (id: string) => {
     if (!token) return;
     setDeleting(id);
@@ -104,6 +107,18 @@ export default function MediaPage() {
     finally { setDeleting(null); }
   };
 
+  const handleDeleteAll = async () => {
+    if (!token) return;
+    setDeletingAll(true);
+    try {
+      await api.publications.deleteAll(token);
+      setAll([]);
+      setConfirmDeleteAll(false);
+      toast.success("Galería vaciada correctamente");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Error al vaciar"); }
+    finally { setDeletingAll(false); }
+  };
+
   return (
     <div className="space-y-5 max-w-7xl">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -111,12 +126,34 @@ export default function MediaPage() {
           <h2 className="text-xl font-bold text-foreground">Galería</h2>
           <p className="text-xs text-muted-foreground">Imágenes generadas y publicaciones</p>
         </div>
-        <Link href="/generate">
-          <button className="h-9 px-4 rounded-xl text-sm font-semibold text-white flex items-center gap-2"
-            style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(342 62% 36%))" }}>
-            <Plus size={15} /> Nueva Publicación
-          </button>
-        </Link>
+        <div className="flex items-center gap-2">
+          {all.length > 0 && (
+            confirmDeleteAll ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">¿Vaciar toda la galería?</span>
+                <button onClick={handleDeleteAll} disabled={deletingAll}
+                  className="h-8 px-3 rounded-lg text-xs font-semibold bg-destructive text-white hover:bg-destructive/90 disabled:opacity-50 transition-colors flex items-center gap-1.5">
+                  {deletingAll ? <><Loader2 size={12} className="animate-spin" />Borrando...</> : "Sí, borrar todo"}
+                </button>
+                <button onClick={() => setConfirmDeleteAll(false)}
+                  className="h-8 px-3 rounded-lg text-xs font-medium border border-border text-muted-foreground hover:text-foreground transition-colors">
+                  Cancelar
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setConfirmDeleteAll(true)}
+                className="h-9 px-3 rounded-xl border border-destructive/30 text-xs font-medium text-destructive/70 hover:text-destructive hover:border-destructive/60 hover:bg-destructive/5 transition-colors flex items-center gap-1.5">
+                <Trash2 size={13} /> Vaciar galería
+              </button>
+            )
+          )}
+          <Link href="/generate">
+            <button className="h-9 px-4 rounded-xl text-sm font-semibold text-white flex items-center gap-2"
+              style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(342 62% 36%))" }}>
+              <Plus size={15} /> Nueva Publicación
+            </button>
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}

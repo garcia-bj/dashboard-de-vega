@@ -135,6 +135,8 @@ export const api = {
       request<PublicationOut>(`/api/publications/${id}`, { method: "PATCH", body: data, token }),
     delete: (id: string, token: string) =>
       request<void>(`/api/publications/${id}`, { method: "DELETE", token }),
+    deleteAll: (token: string) =>
+      request<void>("/api/publications/", { method: "DELETE", token }),
     generate: (data: unknown, token: string) =>
       request<unknown>("/api/publications/generate", { method: "POST", body: data, token }),
   },

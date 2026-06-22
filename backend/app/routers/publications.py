@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, delete as sql_delete
 from uuid import UUID
 
 from app.db.database import get_db
@@ -103,6 +103,17 @@ async def update_publication(
     await db.flush()
     await db.refresh(publication)
     return publication
+
+
+@router.delete("/", status_code=204)
+async def delete_all_publications(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    await db.execute(
+        sql_delete(Publication).where(Publication.user_id == current_user.id)
+    )
+    await db.flush()
 
 
 @router.delete("/{publication_id}", status_code=204)
