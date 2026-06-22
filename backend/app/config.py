@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
 
+    # Public URL of the backend as seen from the internet.
+    # Meta's API downloads images from this URL — it must be reachable externally.
+    # Example: https://api.tudominio.com
+    APP_PUBLIC_URL: str = ""
+
     META_APP_ID: str = ""
     META_APP_SECRET: str = ""
     META_REDIRECT_URI: str = ""

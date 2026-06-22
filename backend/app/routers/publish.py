@@ -344,6 +344,23 @@ async def publish_publication(
     )
     accounts = accounts_result.scalars().all()
 
+    # Ensure image URL is absolute so Meta's servers can download it.
+    # pub.image_url is stored as a relative path like /media/... when using local storage.
+    def to_absolute(url: str) -> str:
+        if not url or url.startswith("http"):
+            return url
+        base = (settings.APP_PUBLIC_URL or "").rstrip("/")
+        if not base:
+            raise HTTPException(
+                400,
+                "APP_PUBLIC_URL no está configurada en el servidor. "
+                "Agrega APP_PUBLIC_URL=https://tu-dominio-backend.com al archivo .env del backend. "
+                "Meta necesita descargar la imagen desde una URL pública."
+            )
+        return f"{base}/{url.lstrip('/')}"
+
+    public_image_url = to_absolute(pub.image_url or "")
+
     results = []
     pub.status = PublicationStatus.PUBLISHING
 
@@ -383,34 +400,37 @@ async def publish_publication(
         is_carousel = pub_meta.get("carousel") and pub_meta.get("carousel_images")
         carousel_images: list[str] = pub_meta.get("carousel_images", [])
 
+        # Make carousel images absolute too
+        abs_carousel = [to_absolute(u) for u in carousel_images] if is_carousel else []
+
         try:
             if target == PublishTarget.FACEBOOK_FEED:
-                if is_carousel and len(carousel_images) >= 2:
+                if is_carousel and len(abs_carousel) >= 2:
                     meta_result = await meta_service.publish_carousel_to_feed(
-                        account.page_id, account.access_token, carousel_images, pub.caption or ""
+                        account.page_id, account.access_token, abs_carousel, pub.caption or ""
                     )
                 else:
                     meta_result = await meta_service.publish_to_feed(
-                        account.page_id, account.access_token, pub.image_url, pub.caption or ""
+                        account.page_id, account.access_token, public_image_url, pub.caption or ""
                     )
             elif target == PublishTarget.FACEBOOK_STORY:
                 meta_result = await meta_service.publish_to_facebook_story(
-                    account.page_id, account.access_token, pub.image_url
+                    account.page_id, account.access_token, public_image_url
                 )
             elif target == PublishTarget.INSTAGRAM_FEED:
                 ig_id = account.instagram_business_id or account.page_id
-                if is_carousel and len(carousel_images) >= 2:
+                if is_carousel and len(abs_carousel) >= 2:
                     meta_result = await meta_service.publish_carousel_to_instagram(
-                        ig_id, account.access_token, carousel_images, pub.caption or ""
+                        ig_id, account.access_token, abs_carousel, pub.caption or ""
                     )
                 else:
                     meta_result = await meta_service.publish_to_instagram(
-                        ig_id, account.access_token, pub.image_url, pub.caption or ""
+                        ig_id, account.access_token, public_image_url, pub.caption or ""
                     )
             elif target == PublishTarget.INSTAGRAM_STORY:
                 meta_result = await meta_service.publish_to_story(
                     account.instagram_business_id or account.page_id,
-                    account.access_token, pub.image_url
+                    account.access_token, public_image_url
                 )
             else:
                 continue

@@ -24,20 +24,29 @@ class MetaService:
             else:
                 response = await client.get(url, params={**params, **(data or {})})
 
-            if response.status_code == 403:
+            if not response.is_success:
                 try:
-                    err = response.json()
-                    fb_msg = err.get("error", {}).get("message", "")
+                    err_body = response.json()
+                    api_err = err_body.get("error", {})
+                    api_msg = api_err.get("message", "")
+                    api_code = api_err.get("code", "")
+                    api_sub  = api_err.get("error_subcode", "")
                 except Exception:
-                    fb_msg = ""
+                    api_msg, api_code, api_sub = response.text[:300], "", ""
+
+                if response.status_code == 403:
+                    raise Exception(
+                        f"403 Sin permisos — el token no tiene acceso a este recurso o es un "
+                        f"User Token en vez de Page Token. Ve a Configuración → Redes Sociales, "
+                        f"elimina la cuenta y vuelve a guardar el token. "
+                        f"Meta dice: {api_msg} (code={api_code})"
+                    )
+
                 raise Exception(
-                    f"403 Forbidden de Meta API — el token no tiene permisos suficientes o "
-                    f"es un User Token en vez de Page Token. "
-                    f"Solución: ve a Configuración → Redes Sociales, elimina la cuenta y vuelve a guardar tu token. "
-                    f"Detalle: {fb_msg}"
+                    f"Meta API {response.status_code}: {api_msg}"
+                    + (f" (code={api_code}" + (f", sub={api_sub}" if api_sub else "") + ")" if api_code else "")
                 )
 
-            response.raise_for_status()
             return response.json()
 
     async def publish_to_feed(
