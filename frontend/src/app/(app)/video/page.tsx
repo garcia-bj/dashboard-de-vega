@@ -110,7 +110,7 @@ export default function VideoPage() {
     }
   };
 
-  const card = "rounded-2xl border border-border bg-card p-5";
+  const card = "rounded-2xl border border-border bg-card p-4 md:p-5";
   const fieldLabel = "text-xs font-semibold text-foreground/70 mb-2 block";
 
   return (

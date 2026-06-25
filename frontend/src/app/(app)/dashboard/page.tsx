@@ -9,7 +9,7 @@ import { api, type PublicationOut, type SocialAccountOut } from "@/lib/api";
 import {
   Wand2, CalendarCheck, ImageIcon, Share2,
   CheckCircle2, Clock, AlertCircle, Plus, Loader2, Facebook, Instagram,
-  ArrowUpRight, TrendingUp, ExternalLink, CalendarDays, Percent,
+  ArrowUpRight, TrendingUp, ExternalLink, CalendarDays, Percent, Video, Pencil,
 } from "lucide-react";
 
 const statusMap: Record<string, { label: string; variant: "success" | "warning" | "ghost" | "default" | "destructive"; icon: typeof CheckCircle2 }> = {
@@ -107,22 +107,27 @@ export default function DashboardPage() {
             Bienvenido a <span style={{ color: "hsl(var(--secondary))" }}>De Vega</span>
           </h1>
           <p className="text-muted-foreground text-sm max-w-lg">
-            Genera imágenes con IA y publica automáticamente en tus redes sociales.
+            Genera imágenes y videos con IA y publica automáticamente en tus redes sociales.
           </p>
-          <div className="flex flex-wrap gap-3 mt-5">
-            <Link href="/generate">
-              <button className="h-9 px-4 rounded-xl text-sm font-semibold text-white flex items-center gap-2 transition-all hover:opacity-90"
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 mt-5">
+            <Link href="/generate" className="contents">
+              <button className="h-10 sm:h-9 px-4 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 col-span-2 sm:col-auto"
                 style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(342 62% 36%))" }}>
                 <Plus size={16} /> Nueva Publicación
               </button>
             </Link>
-            <Link href="/calendar">
-              <button className="h-9 px-4 rounded-xl text-sm font-semibold border border-border bg-muted text-foreground flex items-center gap-2 hover:bg-accent transition-colors">
-                <CalendarDays size={15} /> Ver Calendario
+            <Link href="/video" className="contents">
+              <button className="h-10 sm:h-9 px-4 rounded-xl text-sm font-semibold border border-border bg-muted text-foreground flex items-center justify-center gap-2 hover:bg-accent transition-colors">
+                <Video size={15} /> Editar Video
               </button>
             </Link>
-            <Link href="/schedule">
-              <button className="h-9 px-4 rounded-xl text-sm font-semibold border border-border bg-muted text-foreground flex items-center gap-2 hover:bg-accent transition-colors">
+            <Link href="/calendar" className="contents">
+              <button className="h-10 sm:h-9 px-4 rounded-xl text-sm font-semibold border border-border bg-muted text-foreground flex items-center justify-center gap-2 hover:bg-accent transition-colors">
+                <CalendarDays size={15} /> Calendario
+              </button>
+            </Link>
+            <Link href="/schedule" className="contents">
+              <button className="h-10 sm:h-9 px-4 rounded-xl text-sm font-semibold border border-border bg-muted text-foreground flex items-center justify-center gap-2 hover:bg-accent transition-colors col-span-2 sm:col-auto">
                 <Clock size={15} /> Programar
               </button>
             </Link>

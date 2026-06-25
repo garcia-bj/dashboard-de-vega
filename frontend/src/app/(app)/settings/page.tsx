@@ -379,7 +379,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Label className="text-xs font-semibold text-foreground/70 mb-1.5 block flex items-center gap-1.5">
                 <Facebook size={12} className="text-blue-400" /> Facebook Page ID
@@ -392,7 +392,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Label className="text-xs font-semibold text-foreground/70 mb-1.5 block flex items-center gap-1.5">
                 <Instagram size={12} className="text-pink-400" /> Instagram Business ID <span className="text-muted-foreground font-normal">(opcional)</span>

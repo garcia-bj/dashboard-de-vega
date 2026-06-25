@@ -644,13 +644,13 @@ export default function SchedulePage() {
           )}
 
           {/* Botones de acción */}
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             {/* Publicar Ahora */}
             <button
               onClick={handlePublishNow}
               disabled={publishing || saving || !primaryPub || !targets.length
                 || (pubType === "carousel" && selectedPubs.length < 2)}
-              className="flex-1 h-10 rounded-xl text-sm font-semibold border border-secondary/40 text-secondary hover:bg-secondary/10 flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex-1 h-11 sm:h-10 rounded-xl text-sm font-semibold border border-secondary/40 text-secondary hover:bg-secondary/10 flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {publishing
                 ? <><Loader2 size={15} className="animate-spin" /> Publicando...</>
@@ -661,7 +661,7 @@ export default function SchedulePage() {
               onClick={handleSchedule}
               disabled={saving || publishing || !primaryPub || !targets.length || !scheduleDate || !scheduleTime
                 || (pubType === "carousel" && selectedPubs.length < 2)}
-              className="flex-1 h-10 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex-1 h-11 sm:h-10 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(342 62% 36%))" }}
             >
               {saving

@@ -66,7 +66,7 @@ export default function GeneratePage() {
 
   const [model, setModel] = useState(models[0]);
   const [prompt, setPrompt] = useState("");
-  const [size, setSize] = useState(models[0].sizes[2]);
+  const [size, setSize] = useState(models[0].sizes[1]);
   const [selStyles, setSelStyles] = useState<string[]>([]);
   const [mode, setMode] = useState<"libre" | "personalizado">("libre");
   const [dishes, setDishes] = useState([{ id: 1, name: "", price: "" }]);
@@ -300,7 +300,7 @@ export default function GeneratePage() {
     toast("Imagen descartada");
   };
 
-  const card = "rounded-2xl border border-border bg-card p-5";
+  const card = "rounded-2xl border border-border bg-card p-4 md:p-5";
   const fieldLabel = "text-xs font-semibold text-foreground/70 mb-2 block";
 
   return (
@@ -505,7 +505,7 @@ export default function GeneratePage() {
               value={model.id}
               onValueChange={(v) => {
                 const m = models.find((x) => x.id === v)!;
-                setModel(m); setSize(m.sizes[2] ?? m.sizes[0] ?? "");
+                setModel(m); setSize(m.sizes[1] ?? m.sizes[0] ?? "");
               }}
             >
               <SelectTrigger className="bg-muted border-border rounded-xl h-11">
