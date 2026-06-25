@@ -11,12 +11,13 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Wand2, Calendar, CalendarDays, ImageIcon, Settings,
   Bell, PanelLeftClose, PanelLeftOpen,
-  User, LogOut, LifeBuoy, Menu, Search,
+  User, LogOut, LifeBuoy, Menu, Search, Video,
 } from "lucide-react";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard",   href: "/dashboard" },
   { icon: Wand2,           label: "Generar",     href: "/generate" },
+  { icon: Video,           label: "Video",       href: "/video" },
   { icon: Calendar,        label: "Programar",   href: "/schedule" },
   { icon: CalendarDays,    label: "Calendario",  href: "/calendar" },
   { icon: ImageIcon,       label: "Galería",     href: "/media" },

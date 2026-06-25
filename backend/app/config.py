@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     N8N_IMAGE_GEN_WEBHOOK: str = "/webhook/image-generation"
     N8N_PUBLISH_WEBHOOK: str = "/webhook/auto-publish"
     N8N_IMG_GENERATION_URL: str = ""  # Full URL override (e.g. production n8n endpoint)
+    N8N_VIDEO_EDIT_WEBHOOK: str = ""  # n8n webhook URL for AI video editing
 
     GEMINI_API_KEY: str = ""
     OPENAI_API_KEY: str = ""

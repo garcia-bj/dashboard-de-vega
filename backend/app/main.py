@@ -5,7 +5,7 @@ from sqlalchemy import select
 
 from app.config import get_settings
 from app.db.database import init_db, async_session
-from app.routers import auth, publications, social, media, settings as settings_router, publish
+from app.routers import auth, publications, social, media, settings as settings_router, publish, video
 
 settings = get_settings()
 
@@ -68,6 +68,7 @@ app.include_router(social.router)
 app.include_router(media.router)
 app.include_router(settings_router.router)
 app.include_router(publish.router)
+app.include_router(video.router)
 
 
 @app.get("/health")

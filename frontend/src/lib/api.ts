@@ -87,6 +87,18 @@ export interface SocialAccountOut {
   token_expires_at: string | null;
 }
 
+export interface VideoProjectOut {
+  id: string;
+  title: string;
+  prompt: string;
+  source_video_url: string;
+  edited_video_url: string | null;
+  status: "PENDING" | "PROCESSING" | "DONE" | "FAILED";
+  meta_data: { error?: string; [key: string]: unknown } | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SettingsOut {
   full_name: string | null;
   email: string;
@@ -189,5 +201,48 @@ export const api = {
       request<{ enhanced_caption?: string; hashtags?: string }>("/api/publish/enhance-caption", { method: "POST", body: data, token }),
     validateAccounts: (token: string) =>
       request<{ id: string; provider: string; page_name: string; is_active: boolean }[]>("/api/publish/validate-accounts", { token }),
+    editImage: (file: File, prompt: string, size: string, token: string) => {
+      const form = new FormData();
+      form.append("image", file);
+      form.append("prompt", prompt);
+      form.append("size", size);
+      return fetch(`${API_BASE}/api/publish/edit-image`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      }).then(async (r) => {
+        if (!r.ok) {
+          const e = await r.json().catch(() => ({ detail: "Error desconocido" }));
+          throw new Error(e.detail || "Error al editar imagen");
+        }
+        return r.json() as Promise<GenerateResult>;
+      });
+    },
+  },
+
+  video: {
+    list: (token: string) =>
+      request<VideoProjectOut[]>("/api/video/", { token }),
+    get: (id: string, token: string) =>
+      request<VideoProjectOut>(`/api/video/${id}`, { token }),
+    delete: (id: string, token: string) =>
+      request<void>(`/api/video/${id}`, { method: "DELETE", token }),
+    create: (title: string, prompt: string, file: File, token: string) => {
+      const form = new FormData();
+      form.append("title", title);
+      form.append("prompt", prompt);
+      form.append("file", file);
+      return fetch(`${API_BASE}/api/video/`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      }).then(async (r) => {
+        if (!r.ok) {
+          const e = await r.json().catch(() => ({ detail: "Error desconocido" }));
+          throw new Error(e.detail || "Error al crear proyecto de video");
+        }
+        return r.json() as Promise<VideoProjectOut>;
+      });
+    },
   },
 };

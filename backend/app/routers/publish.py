@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from uuid import UUID
@@ -10,6 +10,7 @@ from app.utils.storage import get_storage, generate_image_path
 
 from app.db.database import get_db
 from app.models.user import User, Publication, SocialAccount, PublishLog, PublicationStatus, PublishTarget
+from app.services.ai_services import OpenAIService
 from app.models.schemas import PublishRequest
 from app.dependencies import get_current_user
 from app.services.meta_service import MetaService
@@ -464,3 +465,41 @@ async def publish_publication(
     await db.flush()
 
     return {"publication_id": str(pub.id), "results": results}
+
+
+@router.post("/edit-image")
+async def edit_image_via_openai(
+    image: UploadFile = File(...),
+    prompt: str = Form(...),
+    size: str = Form("1024x1024"),
+    current_user: User = Depends(get_current_user),
+):
+    if not settings.OPENAI_API_KEY:
+        raise HTTPException(400, "OpenAI API Key no configurada. Configurala en Ajustes.")
+    if image.content_type != "image/png":
+        raise HTTPException(400, "La imagen debe estar en formato PNG para edición.")
+    image_bytes = await image.read()
+    if len(image_bytes) > 4 * 1024 * 1024:
+        raise HTTPException(400, "La imagen no puede superar 4MB.")
+    try:
+        result = await OpenAIService().edit_image(
+            image_bytes=image_bytes,
+            prompt=prompt,
+            publication_id=str(uuid_lib.uuid4()),
+            size=size,
+        )
+    except Exception as e:
+        msg = str(e)
+        if "400" in msg:
+            raise HTTPException(400, f"OpenAI rechazó la imagen: {msg}")
+        if "429" in msg:
+            raise HTTPException(429, "Límite de OpenAI alcanzado. Intentá más tarde.")
+        raise HTTPException(502, f"Error al editar con OpenAI: {msg}")
+    image_url = result["image_url"]
+    abs_url = image_url if image_url.startswith("http") else f"{settings.APP_PUBLIC_URL.rstrip('/')}/{image_url.lstrip('/')}"
+    return {
+        "image_url": abs_url,
+        "data_uri": None,
+        "model": "openai",
+        "raw_response": None,
+    }

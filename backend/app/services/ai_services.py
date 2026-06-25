@@ -1,4 +1,5 @@
 import time
+import base64
 import httpx
 from app.config import get_settings
 from app.utils.storage import get_storage, generate_image_path
@@ -29,11 +30,11 @@ class GeminiService:
         duration_ms = int((time.perf_counter() - start) * 1000)
 
         image_base64 = data["predictions"][0]["bytesBase64Encoded"]
-        image_bytes = __import__("base64").b64decode(image_base64)
+        image_bytes = base64.b64decode(image_base64)
 
         storage = get_storage()
         path = generate_image_path(publication_id)
-        url = await storage.upload(image_bytes, path, content_type="image/png")
+        await storage.upload(image_bytes, path, content_type="image/png")
 
         return {
             "image_url": storage.get_url(path),
@@ -67,11 +68,51 @@ class OpenAIService:
         duration_ms = int((time.perf_counter() - start) * 1000)
 
         image_base64 = data["data"][0]["b64_json"]
-        image_bytes = __import__("base64").b64decode(image_base64)
+        image_bytes = base64.b64decode(image_base64)
 
         storage = get_storage()
         path = generate_image_path(publication_id)
-        url = await storage.upload(image_bytes, path, content_type="image/png")
+        await storage.upload(image_bytes, path, content_type="image/png")
+
+        return {
+            "image_url": storage.get_url(path),
+            "duration_ms": duration_ms,
+            "cost_usd": None,
+            "response_payload": data,
+        }
+
+    async def edit_image(
+        self,
+        image_bytes: bytes,
+        prompt: str,
+        publication_id: str,
+        size: str = "1024x1024",
+    ) -> dict:
+        start = time.perf_counter()
+
+        async with httpx.AsyncClient(timeout=120) as client:
+            response = await client.post(
+                "https://api.openai.com/v1/images/edits",
+                headers={"Authorization": f"Bearer {settings.OPENAI_API_KEY}"},
+                files={"image": ("image.png", image_bytes, "image/png")},
+                data={
+                    "model": "gpt-image-1",
+                    "prompt": prompt,
+                    "n": "1",
+                    "size": size,
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        duration_ms = int((time.perf_counter() - start) * 1000)
+
+        image_base64_out = data["data"][0]["b64_json"]
+        image_bytes_out = base64.b64decode(image_base64_out)
+
+        storage = get_storage()
+        path = generate_image_path(publication_id)
+        await storage.upload(image_bytes_out, path, content_type="image/png")
 
         return {
             "image_url": storage.get_url(path),

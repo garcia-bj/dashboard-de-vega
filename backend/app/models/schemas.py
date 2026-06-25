@@ -141,3 +141,22 @@ class ImageCallbackPayload(BaseModel):
     duration_ms: int | None = None
     cost_usd: float | None = None
     error_message: str | None = None
+
+
+class VideoProjectOut(BaseModel):
+    id: UUID
+    title: str
+    prompt: str
+    source_video_url: str
+    edited_video_url: str | None
+    status: str
+    meta_data: dict | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class VideoWebhookCallback(BaseModel):
+    edited_video_url: str | None = None
+    error_message: str | None = None

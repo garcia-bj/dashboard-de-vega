@@ -28,6 +28,7 @@ class User(Base):
 
     social_accounts = relationship("SocialAccount", back_populates="user")
     publications = relationship("Publication", back_populates="user")
+    video_projects = relationship("VideoProject", back_populates="user")
 
 
 class SocialProvider(str, enum.Enum):
@@ -135,3 +136,31 @@ class PublishLog(Base):
 
     publication = relationship("Publication", back_populates="publish_logs")
     social_account = relationship("SocialAccount", back_populates="publish_logs")
+
+
+class VideoStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    DONE = "DONE"
+    FAILED = "FAILED"
+
+
+class VideoProject(Base):
+    __tablename__ = "video_projects"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    source_video_url: Mapped[str] = mapped_column(Text, nullable=False)
+    edited_video_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[VideoStatus] = mapped_column(
+        SAEnum(VideoStatus, name="videostatus"), default=VideoStatus.PENDING, index=True
+    )
+    meta_data: Mapped[dict | None] = mapped_column(JSONB, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User", back_populates="video_projects")
