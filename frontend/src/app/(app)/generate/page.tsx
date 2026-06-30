@@ -212,14 +212,14 @@ export default function GeneratePage() {
       setEditSaving(false); }
   };
 
-  const handleEnhance = async () => {
-    if (!prompt.trim()) return toast.error("Escribe un prompt para mejorar");
+  const enhanceInto = async (value: string, setValue: (v: string) => void) => {
+    if (!value.trim()) return toast.error("Escribe un prompt para mejorar");
     const token = useAuthStore.getState().token || localStorage.getItem("token");
     if (!token) { toast.error("Sesión expirada"); return; }
     setEnhancing(true);
     try {
-      const data = await api.publish.enhancePrompt(prompt.trim(), token);
-      setPrompt(data.enhanced_prompt);
+      const data = await api.publish.enhancePrompt(value.trim(), token);
+      setValue(data.enhanced_prompt);
       toast.success("Prompt mejorado");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Error al mejorar el prompt");
@@ -227,6 +227,8 @@ export default function GeneratePage() {
       setEnhancing(false);
     }
   };
+
+  const handleEnhance = () => enhanceInto(prompt, setPrompt);
 
   const addDish = () => setDishes((d) => [...d, { id: Date.now(), name: "", price: "" }]);
   const removeDish = (id: number) => setDishes((d) => d.filter((x) => x.id !== id));
@@ -395,6 +397,15 @@ export default function GeneratePage() {
                   placeholder="Describí los cambios: cambiar el fondo a un restaurante, ajustar colores, agregar texto..."
                   className="w-full rounded-xl border border-border bg-muted px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
                 />
+                <button
+                  onClick={() => enhanceInto(editPrompt, setEditPrompt)}
+                  disabled={enhancing || !editPrompt.trim()}
+                  className="mt-2.5 w-full h-9 rounded-xl border border-secondary/40 text-xs font-semibold text-secondary hover:bg-secondary/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1.5"
+                >
+                  {enhancing
+                    ? <><Loader2 size={13} className="animate-spin" /> Mejorando prompt...</>
+                    : <><Zap size={13} /> Mejorar prompt con IA</>}
+                </button>
               </div>
               <div className="flex items-center gap-2 rounded-xl bg-muted/50 border border-border px-3 py-2.5">
                 <Sparkles size={13} className="text-secondary flex-shrink-0" />

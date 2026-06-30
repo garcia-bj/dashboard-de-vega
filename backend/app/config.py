@@ -33,6 +33,7 @@ class Settings(BaseSettings):
 
     GEMINI_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
+    GEMINI_TEXT_MODEL: str = "gemini-2.5-pro"  # used for prompt/caption enhancement
 
     # Public URL of the backend as seen from the internet.
     # Meta's API downloads images from this URL — it must be reachable externally.

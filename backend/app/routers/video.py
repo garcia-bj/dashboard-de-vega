@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 import tempfile
 import uuid as uuid_lib
@@ -19,6 +20,7 @@ from app.services import kie_service
 from app.utils.storage import get_storage
 
 settings = get_settings()
+logger = logging.getLogger("video")
 router = APIRouter(prefix="/api/video", tags=["video"])
 
 ALLOWED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/webp"}
@@ -218,6 +220,8 @@ async def _run_job(
     project_id: UUID, mode: str, source_urls: list[str],
     prompt: str, duration: int, aspect_ratio: str, generate_audio: bool,
 ) -> None:
+    logger.info("Video job %s iniciado (mode=%s, duration=%ss, sources=%d)",
+                project_id, mode, duration, len(source_urls))
     await _set_status(project_id, status=VideoStatus.PROCESSING)
     try:
         # Split the requested duration into clips of <= MAX_CLIP_SECONDS.
@@ -249,5 +253,7 @@ async def _run_job(
             final, f"videos/{project_id}/result.mp4", content_type="video/mp4"
         )
         await _set_status(project_id, status=VideoStatus.DONE, edited_video_url=stored_url)
+        logger.info("Video job %s LISTO: %s", project_id, stored_url)
     except Exception as e:  # noqa: BLE001 — surface any failure to the user
+        logger.exception("Video job %s FALLÓ", project_id)
         await _set_status(project_id, status=VideoStatus.FAILED, meta_extra={"error": str(e)[:500]})

@@ -22,6 +22,7 @@ router = APIRouter(prefix="/api/publish", tags=["publish"])
 
 OPENAI_TEXT_URL = "https://api.openai.com/v1/chat/completions"
 OPENAI_MODEL = "gpt-4o-mini"
+GEMINI_TEXT_URL = "https://generativelanguage.googleapis.com/v1beta"
 
 ENHANCE_SYSTEM = (
     "Eres un experto en prompts para generación de imágenes con IA. "
@@ -77,6 +78,34 @@ async def _call_openai(system: str, user_text: str) -> str:
     return data["choices"][0]["message"]["content"].strip()
 
 
+async def _call_gemini(system: str, user_text: str) -> str:
+    api_key = settings.GEMINI_API_KEY
+    if not api_key:
+        raise HTTPException(400, "Gemini API Key no configurada en el servidor")
+    async with httpx.AsyncClient(timeout=30) as client:
+        res = await client.post(
+            f"{GEMINI_TEXT_URL}/models/{settings.GEMINI_TEXT_MODEL}:generateContent",
+            params={"key": api_key},
+            json={
+                "systemInstruction": {"parts": [{"text": system}]},
+                "contents": [{"role": "user", "parts": [{"text": user_text}]}],
+                "generationConfig": {"temperature": 0.75, "maxOutputTokens": 512},
+            },
+        )
+        res.raise_for_status()
+        data = res.json()
+    return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+
+
+async def _call_llm(system: str, user_text: str) -> str:
+    """Enhance text with OpenAI if configured, otherwise Gemini."""
+    if settings.OPENAI_API_KEY:
+        return await _call_openai(system, user_text)
+    if settings.GEMINI_API_KEY:
+        return await _call_gemini(system, user_text)
+    raise HTTPException(400, "No hay API Key de OpenAI ni Gemini configurada en el servidor")
+
+
 @router.post("/enhance-prompt")
 async def enhance_prompt(
     payload: dict,
@@ -87,15 +116,15 @@ async def enhance_prompt(
         raise HTTPException(400, "El prompt no puede estar vacío")
 
     try:
-        enhanced = await _call_openai(ENHANCE_SYSTEM, prompt)
+        enhanced = await _call_llm(ENHANCE_SYSTEM, prompt)
     except HTTPException:
         raise
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 429:
-            raise HTTPException(429, "Límite de uso de OpenAI alcanzado. Esperá unos segundos.")
-        raise HTTPException(502, f"Error de OpenAI: {e.response.text[:200]}")
+            raise HTTPException(429, "Límite de uso alcanzado. Esperá unos segundos.")
+        raise HTTPException(502, f"Error del modelo: {e.response.text[:200]}")
     except (httpx.HTTPError, KeyError, IndexError):
-        raise HTTPException(502, "Error al conectar con OpenAI")
+        raise HTTPException(502, "Error al conectar con el modelo de IA")
 
     return {"enhanced_prompt": enhanced}
 
@@ -116,17 +145,17 @@ async def enhance_caption(
     result: dict = {}
     try:
         if mode in ("caption", "both"):
-            result["enhanced_caption"] = await _call_openai(CAPTION_SYSTEM, user_text_caption)
+            result["enhanced_caption"] = await _call_llm(CAPTION_SYSTEM, user_text_caption)
         if mode in ("hashtags", "both"):
-            result["hashtags"] = await _call_openai(HASHTAG_SYSTEM, user_text_hashtags)
+            result["hashtags"] = await _call_llm(HASHTAG_SYSTEM, user_text_hashtags)
     except HTTPException:
         raise
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 429:
-            raise HTTPException(429, "Límite de uso de OpenAI alcanzado. Esperá unos segundos.")
-        raise HTTPException(502, "Error al conectar con OpenAI")
+            raise HTTPException(429, "Límite de uso alcanzado. Esperá unos segundos.")
+        raise HTTPException(502, "Error al conectar con el modelo de IA")
     except (httpx.HTTPError, KeyError, IndexError):
-        raise HTTPException(502, "Error al conectar con OpenAI")
+        raise HTTPException(502, "Error al conectar con el modelo de IA")
 
     return result
 
