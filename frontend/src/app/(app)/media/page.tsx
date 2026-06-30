@@ -6,14 +6,22 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
-import { api, type PublicationOut } from "@/lib/api";
+import { api, type PublicationOut, type VideoProjectOut } from "@/lib/api";
 import {
   Select, SelectContent, SelectItem, SelectTrigger,
 } from "@/components/ui/select";
 import {
   Plus, CalendarDays, ChevronLeft, ChevronRight, Grid3X3, List,
   MoreVertical, Clock, CheckCircle2, Edit3, AlertCircle, Sparkles, Trash2, Eye, Loader2, Download,
+  Film, ImageIcon,
 } from "lucide-react";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+function toAbsoluteUrl(url: string): string {
+  if (!url) return url;
+  if (url.startsWith("http")) return url;
+  return `${API_BASE}${url.startsWith("/") ? "" : "/"}${url}`;
+}
 
 const statusConfig: Record<string, { label: string; variant: "success" | "warning" | "ghost" | "destructive" | "default"; icon: typeof CheckCircle2 }> = {
   published:  { label: "Publicado",  variant: "success",     icon: CheckCircle2 },
@@ -48,6 +56,7 @@ const PAGE_SIZE = 10;
 export default function MediaPage() {
   const token = useAuthStore((s) => s.token) || (typeof window !== "undefined" ? localStorage.getItem("token") : null);
   const [all, setAll] = useState<PublicationOut[]>([]);
+  const [videos, setVideos] = useState<VideoProjectOut[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState(dateRanges[1]);
@@ -57,7 +66,16 @@ export default function MediaPage() {
 
   useEffect(() => {
     if (!token) return;
-    api.publications.list(token).then(setAll).catch(() => toast.error("Error al cargar galería")).finally(() => setLoading(false));
+    Promise.all([
+      api.publications.list(token),
+      api.video.list(token).catch(() => [] as VideoProjectOut[]),
+    ])
+      .then(([pubs, vids]) => {
+        setAll(pubs);
+        setVideos(vids.filter((v) => v.status === "DONE" && v.edited_video_url));
+      })
+      .catch(() => toast.error("Error al cargar galería"))
+      .finally(() => setLoading(false));
   }, [token]);
 
   const daysMap: Record<string, number> = { "Últimos 7 días": 7, "Últimos 30 días": 30, "Últimos 90 días": 90 };
@@ -75,11 +93,18 @@ export default function MediaPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+  const filteredVideos = videos
+    .filter((v) => !daysMap[dateRange] || new Date(v.created_at).getTime() >= Date.now() - daysMap[dateRange] * 86400000)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  // Los filtros de estado son de publicaciones; mostramos videos solo en la vista "Todos".
+  const showVideos = statusFilter === "Todos" && filteredVideos.length > 0;
+
   const handleDownload = async (url: string, title: string) => {
     try {
       const res = await fetch(url);
       const blob = await res.blob();
-      const ext = blob.type.includes("png") ? "png" : "jpg";
+      const ext = blob.type.includes("video") || blob.type.includes("mp4") ? "mp4"
+        : blob.type.includes("png") ? "png" : "jpg";
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = blobUrl;
@@ -107,6 +132,17 @@ export default function MediaPage() {
     finally { setDeleting(null); }
   };
 
+  const handleDeleteVideo = async (id: string) => {
+    if (!token) return;
+    setDeleting(id);
+    try {
+      await api.video.delete(id, token);
+      setVideos((prev) => prev.filter((v) => v.id !== id));
+      toast.success("Video eliminado");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Error"); }
+    finally { setDeleting(null); }
+  };
+
   const handleDeleteAll = async () => {
     if (!token) return;
     setDeletingAll(true);
@@ -124,7 +160,7 @@ export default function MediaPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-foreground">Galería</h2>
-          <p className="text-xs text-muted-foreground">Imágenes generadas y publicaciones</p>
+          <p className="text-xs text-muted-foreground">Imágenes y videos generados</p>
         </div>
         <div className="flex items-center gap-2">
           {all.length > 0 && (
@@ -190,6 +226,51 @@ export default function MediaPage() {
         </div>
       </div>
 
+      {/* Sección Videos */}
+      {showVideos && (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Film size={16} className="text-primary" />
+            <h3 className="text-sm font-bold text-foreground">Videos</h3>
+            <span className="text-xs text-muted-foreground">({filteredVideos.length})</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {filteredVideos.map((v) => (
+              <div key={v.id} className="rounded-2xl border border-border bg-card overflow-hidden group">
+                <div className="bg-black flex items-center justify-center relative max-h-[240px] overflow-hidden">
+                  <video src={toAbsoluteUrl(v.edited_video_url!)} controls className="w-full max-h-[240px] object-contain" />
+                  <div className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                    <button onClick={() => handleDownload(toAbsoluteUrl(v.edited_video_url!), v.title)}
+                      className="w-7 h-7 rounded-lg bg-background/80 backdrop-blur-sm border border-border flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="Descargar">
+                      <Download size={12} />
+                    </button>
+                    <button onClick={() => handleDeleteVideo(v.id)} disabled={deleting === v.id}
+                      className="w-7 h-7 rounded-lg bg-background/80 backdrop-blur-sm border border-border flex items-center justify-center hover:bg-destructive/10 hover:text-destructive text-muted-foreground transition-colors">
+                      {deleting === v.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                    </button>
+                  </div>
+                </div>
+                <div className="p-3">
+                  <p className="text-xs font-semibold text-foreground mb-1 truncate">{v.title}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{v.prompt}</p>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1"><Clock size={10} />{formatDate(v.created_at)}</span>
+                    <span className="flex items-center gap-1"><Film size={10} /> Video</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Sección Imágenes */}
+      {showVideos && (
+        <div className="flex items-center gap-2">
+          <ImageIcon size={16} className="text-primary" />
+          <h3 className="text-sm font-bold text-foreground">Imágenes</h3>
+        </div>
+      )}
       {loading ? (
         <div className="flex items-center justify-center h-48">
           <Loader2 size={24} className="animate-spin text-muted-foreground" />
