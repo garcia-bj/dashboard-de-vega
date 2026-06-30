@@ -4,7 +4,7 @@ from sqlalchemy import select
 from uuid import UUID
 import uuid as uuid_lib
 import httpx
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.db.database import get_db
 from app.models.user import User, VideoProject, VideoStatus
@@ -138,7 +138,7 @@ async def video_callback(
         project.edited_video_url = payload.edited_video_url
         project.status = VideoStatus.DONE
 
-    project.updated_at = datetime.utcnow()
+    project.updated_at = datetime.now(timezone.utc)
     await db.flush()
     return {"ok": True}
 

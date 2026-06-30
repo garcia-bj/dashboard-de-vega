@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 from uuid import uuid4
-from datetime import datetime
+from datetime import datetime, timezone
 import aiofiles
 from app.config import get_settings
 
@@ -128,6 +128,6 @@ def get_storage() -> StorageBackend:
 
 
 def generate_image_path(publication_id: str, extension: str = "png") -> str:
-    date_str = datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S")
+    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
     suffix = uuid4().hex[:4]
     return f"publications/{publication_id}/{date_str}_{suffix}.{extension}"

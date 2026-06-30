@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import String, DateTime, Text, Boolean, Enum as SAEnum, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
@@ -23,8 +23,8 @@ class User(Base):
     role: Mapped[UserRole] = mapped_column(SAEnum(UserRole), default=UserRole.USER)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     meta_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     social_accounts = relationship("SocialAccount", back_populates="user")
     publications = relationship("Publication", back_populates="user")
@@ -48,7 +48,7 @@ class SocialAccount(Base):
     token_expires_at: Mapped[datetime | None] = mapped_column(DateTime)
     instagram_business_id: Mapped[str | None] = mapped_column(String(100))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     user = relationship("User", back_populates="social_accounts")
     publish_logs = relationship("PublishLog", back_populates="social_account")
@@ -91,11 +91,11 @@ class Publication(Base):
         SAEnum(PublicationStatus), default=PublicationStatus.DRAFT, index=True
     )
     targets: Mapped[list] = mapped_column(JSONB, default=list)
-    scheduled_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
-    published_at: Mapped[datetime | None] = mapped_column(DateTime)
+    scheduled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     meta_data: Mapped[dict | None] = mapped_column(JSONB)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     user = relationship("User", back_populates="publications")
     generation_logs = relationship("GenerationLog", back_populates="publication", cascade="all, delete-orphan", passive_deletes=True)
@@ -115,7 +115,7 @@ class GenerationLog(Base):
     duration_ms: Mapped[int | None] = mapped_column()
     cost_usd: Mapped[float | None] = mapped_column()
     error_message: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     publication = relationship("Publication", back_populates="generation_logs")
 
@@ -132,7 +132,7 @@ class PublishLog(Base):
     meta_permalink: Mapped[str | None] = mapped_column(Text)
     error_message: Mapped[str | None] = mapped_column(Text)
     response_payload: Mapped[dict | None] = mapped_column(JSONB)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     publication = relationship("Publication", back_populates="publish_logs")
     social_account = relationship("SocialAccount", back_populates="publish_logs")
@@ -160,7 +160,7 @@ class VideoProject(Base):
         SAEnum(VideoStatus, name="videostatus"), default=VideoStatus.PENDING, index=True
     )
     meta_data: Mapped[dict | None] = mapped_column(JSONB, default=dict)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     user = relationship("User", back_populates="video_projects")

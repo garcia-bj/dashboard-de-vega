@@ -5,6 +5,7 @@ from uuid import UUID
 import httpx
 import base64
 import uuid as uuid_lib
+from datetime import datetime, timezone
 
 from app.utils.storage import get_storage, generate_image_path
 
@@ -271,7 +272,6 @@ async def save_to_gallery(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    from datetime import datetime
     from app.models.user import AImodel
 
     image_url = payload.get("image_url")
@@ -302,7 +302,7 @@ async def save_to_gallery(
             raise HTTPException(502, f"Error al guardar imagen: {str(e)}")
 
     ai_model = AImodel.OPENAI if model_id == "openai" else AImodel.GEMINI
-    title = datetime.utcnow().strftime("%d/%m/%Y %H:%M")
+    title = datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M")
 
     pub = Publication(
         user_id=current_user.id,
@@ -312,7 +312,7 @@ async def save_to_gallery(
         image_url=image_url,
         status=PublicationStatus.GENERATED,
         targets=[],
-        scheduled_at=datetime.utcnow(),
+        scheduled_at=datetime.now(timezone.utc),
     )
     db.add(pub)
     await db.flush()
@@ -457,7 +457,7 @@ async def publish_publication(
             results.append({"target": target_str, "success": False, "error": str(e)})
 
     pub.status = PublicationStatus.PUBLISHED if any(r["success"] for r in results) else PublicationStatus.FAILED
-    pub.published_at = __import__("datetime").datetime.utcnow()
+    pub.published_at = datetime.now(timezone.utc)
     # Store publish results in meta_data so the calendar/history can show permalinks
     existing_meta = dict(pub.meta_data or {})
     existing_meta["publish_results"] = results

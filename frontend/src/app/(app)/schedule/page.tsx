@@ -32,7 +32,7 @@ function formatDate(iso: string) {
 
 function toLocalDatetimeInputs(iso: string) {
   const d = new Date(iso);
-  const date = d.toISOString().split("T")[0];
+  const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const time = d.toTimeString().slice(0, 5);
   return { date, time };
 }
