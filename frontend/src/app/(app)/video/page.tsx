@@ -8,7 +8,7 @@ import { useAuthStore } from "@/store/auth";
 import { api, VideoProjectOut } from "@/lib/api";
 import {
   Video, Upload, X, Loader2, AlertCircle, Trash2, Clock, Play,
-  Images as ImagesIcon, Film, Volume2, VolumeX, Sparkles,
+  Images as ImagesIcon, Film, Volume2, VolumeX, Sparkles, Zap,
 } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -44,6 +44,7 @@ export default function VideoPage() {
   const [aspectRatio, setAspectRatio] = useState("9:16");
   const [audio, setAudio] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
 
   const [projects, setProjects] = useState<VideoProjectOut[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,6 +120,21 @@ export default function VideoPage() {
       toast.error(e instanceof Error ? e.message : "Error al enviar");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleEnhance = async () => {
+    if (!prompt.trim()) return toast.error("Escribí un prompt para mejorar");
+    if (!token) { toast.error("Sesión expirada"); return; }
+    setEnhancing(true);
+    try {
+      const data = await api.publish.enhancePrompt(prompt.trim(), token);
+      setPrompt(data.enhanced_prompt);
+      toast.success("Prompt mejorado");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error al mejorar el prompt");
+    } finally {
+      setEnhancing(false);
     }
   };
 
@@ -253,6 +269,15 @@ export default function VideoPage() {
                   : "Ej: cambiar el fondo a una playa, agregar slow-motion..."}
                 className="w-full rounded-xl border border-border bg-muted px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
               />
+              <button
+                onClick={handleEnhance}
+                disabled={enhancing || !prompt.trim()}
+                className="mt-2.5 w-full h-9 rounded-xl border border-secondary/40 text-xs font-semibold text-secondary hover:bg-secondary/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1.5"
+              >
+                {enhancing
+                  ? <><Loader2 size={13} className="animate-spin" /> Mejorando prompt...</>
+                  : <><Zap size={13} /> Mejorar prompt con IA</>}
+              </button>
             </div>
 
             {/* Duration */}

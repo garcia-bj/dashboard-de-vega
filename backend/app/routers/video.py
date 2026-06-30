@@ -236,7 +236,7 @@ async def _run_job(
             inp = {
                 "prompt": prompt,
                 "aspect_ratio": aspect_ratio,
-                "resolution": "1080p",
+                "resolution": "720p",  # más barato que 1080p y suficiente para redes
                 "duration": d,
                 "generate_audio": generate_audio,
             }
