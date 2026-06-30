@@ -227,11 +227,23 @@ export const api = {
       request<VideoProjectOut>(`/api/video/${id}`, { token }),
     delete: (id: string, token: string) =>
       request<void>(`/api/video/${id}`, { method: "DELETE", token }),
-    create: (title: string, prompt: string, file: File, token: string) => {
+    create: (
+      params: {
+        title: string; prompt: string;
+        mode: "images" | "video";
+        duration: number; aspectRatio: string; audio: boolean;
+        files: File[];
+      },
+      token: string
+    ) => {
       const form = new FormData();
-      form.append("title", title);
-      form.append("prompt", prompt);
-      form.append("file", file);
+      form.append("title", params.title);
+      form.append("prompt", params.prompt);
+      form.append("mode", params.mode);
+      form.append("duration", String(params.duration));
+      form.append("aspect_ratio", params.aspectRatio);
+      form.append("generate_audio", String(params.audio));
+      params.files.forEach((f) => form.append("files", f));
       return fetch(`${API_BASE}/api/video/`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },

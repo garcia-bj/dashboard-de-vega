@@ -1,29 +1,39 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from uuid import UUID
+import asyncio
+import os
+import tempfile
 import uuid as uuid_lib
-import httpx
 from datetime import datetime, timezone
 
-from app.db.database import get_db
-from app.models.user import User, VideoProject, VideoStatus
-from app.models.schemas import VideoProjectOut, VideoWebhookCallback
-from app.dependencies import get_current_user
-from app.utils.storage import get_storage
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from uuid import UUID
+
 from app.config import get_settings
+from app.db.database import get_db, async_session
+from app.dependencies import get_current_user
+from app.models.schemas import VideoProjectOut
+from app.models.user import User, VideoProject, VideoStatus
+from app.services import kie_service
+from app.utils.storage import get_storage
 
 settings = get_settings()
 router = APIRouter(prefix="/api/video", tags=["video"])
 
+ALLOWED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/webp"}
 ALLOWED_VIDEO_TYPES = {
-    "video/mp4",
-    "video/quicktime",
-    "video/x-msvideo",
-    "video/webm",
-    "video/x-matroska",
+    "video/mp4", "video/quicktime", "video/x-msvideo", "video/webm", "video/x-matroska",
 }
-MAX_VIDEO_BYTES = 100 * 1024 * 1024  # 100 MB
+MAX_IMAGE_BYTES = 10 * 1024 * 1024    # 10 MB per image
+MAX_VIDEO_BYTES = 100 * 1024 * 1024   # 100 MB
+MAX_CLIP_SECONDS = 15                 # Seedance per-generation cap
+MAX_TOTAL_SECONDS = 45                # we stitch clips with ffmpeg above the cap
+
+# Keep refs so background tasks aren't garbage-collected mid-flight.
+# ponytail: in-process orchestration — if the container restarts, an in-flight
+# job is lost (stays PROCESSING). Add a queue/worker if that becomes a problem.
+_bg_tasks: set = set()
 
 
 @router.get("/", response_model=list[VideoProjectOut])
@@ -43,61 +53,75 @@ async def list_video_projects(
 async def create_video_project(
     title: str = Form(...),
     prompt: str = Form(...),
-    file: UploadFile = File(...),
+    mode: str = Form("images"),               # "images" | "video"
+    duration: int = Form(5),                  # total seconds, 4-45
+    aspect_ratio: str = Form("9:16"),
+    generate_audio: bool = Form(True),
+    files: list[UploadFile] = File(...),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if file.content_type not in ALLOWED_VIDEO_TYPES:
-        raise HTTPException(400, "Formato no soportado. Usá MP4, MOV, AVI o WebM.")
+    if not settings.KIE_API_KEY:
+        raise HTTPException(503, "El servicio de video no está configurado (falta KIE_API_KEY).")
+    if not settings.APP_PUBLIC_URL:
+        raise HTTPException(503, "APP_PUBLIC_URL no está configurada; Kie no puede descargar los archivos.")
+    if mode not in ("images", "video"):
+        raise HTTPException(400, "Modo inválido.")
+    if not (4 <= duration <= MAX_TOTAL_SECONDS):
+        raise HTTPException(400, f"La duración debe estar entre 4 y {MAX_TOTAL_SECONDS} segundos.")
+    if not files:
+        raise HTTPException(400, "Subí al menos un archivo.")
 
-    if not settings.N8N_VIDEO_EDIT_WEBHOOK:
-        raise HTTPException(503, "El servicio de edición de video no está configurado aún.")
+    if mode == "images":
+        if len(files) > 9:
+            raise HTTPException(400, "Máximo 9 imágenes.")
+        allowed, limit, kind = ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, "imagen"
+    else:
+        if len(files) != 1:
+            raise HTTPException(400, "Para editar video, subí un solo archivo.")
+        allowed, limit, kind = ALLOWED_VIDEO_TYPES, MAX_VIDEO_BYTES, "video"
 
-    video_bytes = await file.read()
-    if len(video_bytes) > MAX_VIDEO_BYTES:
-        raise HTTPException(400, "El video no puede superar 100MB.")
-
+    project_id = uuid_lib.uuid4()
     storage = get_storage()
-    ext = (file.filename or "video.mp4").rsplit(".", 1)[-1].lower()
-    project_id = str(uuid_lib.uuid4())
-    path = f"videos/{project_id}/source.{ext}"
-    await storage.upload(video_bytes, path, content_type=file.content_type or "video/mp4")
-    source_url = storage.get_url(path)
+    base = settings.APP_PUBLIC_URL.rstrip("/")
+    source_urls: list[str] = []
 
-    abs_source_url = (
-        source_url
-        if source_url.startswith("http")
-        else f"{settings.APP_PUBLIC_URL.rstrip('/')}/{source_url.lstrip('/')}"
-    )
+    for i, f in enumerate(files):
+        if f.content_type not in allowed:
+            raise HTTPException(400, f"Formato de {kind} no soportado: {f.content_type}")
+        data = await f.read()
+        if len(data) > limit:
+            raise HTTPException(400, f"Cada {kind} supera el tamaño máximo permitido.")
+        ext = (f.filename or "file").rsplit(".", 1)[-1].lower()
+        path = f"videos/{project_id}/src_{i}.{ext}"
+        url = await storage.upload(data, path, content_type=f.content_type)
+        source_urls.append(url if url.startswith("http") else f"{base}/{url.lstrip('/')}")
 
     project = VideoProject(
-        id=uuid_lib.UUID(project_id),
+        id=project_id,
         user_id=current_user.id,
         title=title,
         prompt=prompt,
-        source_video_url=abs_source_url,
+        source_video_url=source_urls[0],
         status=VideoStatus.PENDING,
+        meta_data={
+            "mode": mode,
+            "duration": duration,
+            "aspect_ratio": aspect_ratio,
+            "generate_audio": generate_audio,
+            "source_urls": source_urls,
+            "clips": -(-duration // MAX_CLIP_SECONDS),  # ceil
+        },
     )
     db.add(project)
     await db.flush()
     await db.refresh(project)
 
-    callback_url = f"{settings.APP_PUBLIC_URL.rstrip('/')}/api/video/{project_id}/callback"
-    try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            await client.post(
-                settings.N8N_VIDEO_EDIT_WEBHOOK,
-                json={
-                    "video_project_id": project_id,
-                    "video_url": abs_source_url,
-                    "prompt": prompt,
-                    "callback_url": callback_url,
-                },
-            )
-        project.status = VideoStatus.PROCESSING
-        await db.flush()
-    except httpx.HTTPError:
-        pass
+    task = asyncio.create_task(
+        _run_job(project_id, mode, source_urls, prompt, duration, aspect_ratio, generate_audio)
+    )
+    _bg_tasks.add(task)
+    task.add_done_callback(_bg_tasks.discard)
 
     return project
 
@@ -120,29 +144,6 @@ async def get_video_project(
     return project
 
 
-@router.post("/{project_id}/callback", include_in_schema=False)
-async def video_callback(
-    project_id: UUID,
-    payload: VideoWebhookCallback,
-    db: AsyncSession = Depends(get_db),
-):
-    result = await db.execute(select(VideoProject).where(VideoProject.id == project_id))
-    project = result.scalar_one_or_none()
-    if not project:
-        raise HTTPException(404, "Proyecto no encontrado.")
-
-    if payload.error_message:
-        project.status = VideoStatus.FAILED
-        project.meta_data = {**(project.meta_data or {}), "error": payload.error_message}
-    else:
-        project.edited_video_url = payload.edited_video_url
-        project.status = VideoStatus.DONE
-
-    project.updated_at = datetime.now(timezone.utc)
-    await db.flush()
-    return {"ok": True}
-
-
 @router.delete("/{project_id}", status_code=204)
 async def delete_video_project(
     project_id: UUID,
@@ -160,3 +161,93 @@ async def delete_video_project(
         raise HTTPException(404, "Proyecto no encontrado.")
     await db.delete(project)
     await db.flush()
+
+
+# ──────────────────────────── background orchestration ────────────────────────────
+
+async def _set_status(project_id: UUID, *, meta_extra: dict | None = None, **fields) -> None:
+    async with async_session() as db:
+        proj = (
+            await db.execute(select(VideoProject).where(VideoProject.id == project_id))
+        ).scalar_one_or_none()
+        if not proj:
+            return
+        for k, v in fields.items():
+            setattr(proj, k, v)
+        if meta_extra:
+            proj.meta_data = {**(proj.meta_data or {}), **meta_extra}
+        proj.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+
+
+async def _download(url: str) -> bytes:
+    async with httpx.AsyncClient(timeout=180, follow_redirects=True) as c:
+        r = await c.get(url)
+        r.raise_for_status()
+        return r.content
+
+
+async def _stitch_clips(clip_bytes: list[bytes]) -> bytes:
+    """Concatenate clips into one mp4 with ffmpeg (re-encode for safety)."""
+    with tempfile.TemporaryDirectory() as d:
+        paths = []
+        for i, b in enumerate(clip_bytes):
+            p = os.path.join(d, f"clip{i}.mp4")
+            with open(p, "wb") as f:
+                f.write(b)
+            paths.append(p)
+        listfile = os.path.join(d, "list.txt")
+        with open(listfile, "w") as f:
+            for p in paths:
+                f.write(f"file '{p}'\n")
+        out = os.path.join(d, "out.mp4")
+        proc = await asyncio.create_subprocess_exec(
+            "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", listfile,
+            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac",
+            "-movflags", "+faststart", out,
+            stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE,
+        )
+        _, err = await proc.communicate()
+        if proc.returncode != 0:
+            raise RuntimeError(f"ffmpeg falló: {err.decode(errors='ignore')[-400:]}")
+        with open(out, "rb") as f:
+            return f.read()
+
+
+async def _run_job(
+    project_id: UUID, mode: str, source_urls: list[str],
+    prompt: str, duration: int, aspect_ratio: str, generate_audio: bool,
+) -> None:
+    await _set_status(project_id, status=VideoStatus.PROCESSING)
+    try:
+        # Split the requested duration into clips of <= MAX_CLIP_SECONDS.
+        clips, remaining = [], duration
+        while remaining > 0:
+            d = min(MAX_CLIP_SECONDS, remaining)
+            clips.append(d)
+            remaining -= d
+
+        clip_bytes: list[bytes] = []
+        for d in clips:
+            inp = {
+                "prompt": prompt,
+                "aspect_ratio": aspect_ratio,
+                "resolution": "1080p",
+                "duration": d,
+                "generate_audio": generate_audio,
+            }
+            if mode == "video":
+                inp["reference_video_urls"] = source_urls[:3]
+            else:
+                inp["reference_image_urls"] = source_urls[:9]
+            task_id = await kie_service.create_task(inp)
+            result_url = await kie_service.wait_for_result(task_id)
+            clip_bytes.append(await _download(result_url))
+
+        final = clip_bytes[0] if len(clip_bytes) == 1 else await _stitch_clips(clip_bytes)
+        stored_url = await get_storage().upload(
+            final, f"videos/{project_id}/result.mp4", content_type="video/mp4"
+        )
+        await _set_status(project_id, status=VideoStatus.DONE, edited_video_url=stored_url)
+    except Exception as e:  # noqa: BLE001 — surface any failure to the user
+        await _set_status(project_id, status=VideoStatus.FAILED, meta_extra={"error": str(e)[:500]})

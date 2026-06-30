@@ -24,7 +24,12 @@ class Settings(BaseSettings):
     N8N_IMAGE_GEN_WEBHOOK: str = "/webhook/image-generation"
     N8N_PUBLISH_WEBHOOK: str = "/webhook/auto-publish"
     N8N_IMG_GENERATION_URL: str = ""  # Full URL override (e.g. production n8n endpoint)
-    N8N_VIDEO_EDIT_WEBHOOK: str = ""  # n8n webhook URL for AI video editing
+    N8N_VIDEO_EDIT_WEBHOOK: str = ""  # legacy, unused (video now goes direct to Kie.ai)
+
+    # Kie.ai — unified video generation API (Seedance, Veo, Kling…)
+    KIE_API_KEY: str = ""
+    KIE_BASE_URL: str = "https://api.kie.ai"
+    KIE_VIDEO_MODEL: str = "bytedance/seedance-2"
 
     GEMINI_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
