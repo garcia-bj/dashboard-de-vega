@@ -70,6 +70,68 @@ const EMPTY_PERSONALIZADO: PersonalizadoData = {
 
 type Category = "entradas" | "segundos" | "guarniciones" | "bebidas" | "postres";
 
+function CategorySection({
+  title, cat, items,
+  onAdd, onRemove, onUpdate,
+}: {
+  title: string;
+  cat: Category;
+  items: MenuItem[];
+  onAdd: (cat: Category) => void;
+  onRemove: (cat: Category, id: number) => void;
+  onUpdate: (cat: Category, id: number, field: "name" | "price", value: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between px-1">
+        <span className="text-xs font-semibold text-foreground/60 flex items-center gap-1.5">
+          <UtensilsCrossed size={11} /> {title}
+        </span>
+        <button
+          onClick={() => onAdd(cat)}
+          className="text-xs text-primary hover:text-primary/70 font-medium flex items-center gap-1"
+        >
+          <Plus size={11} /> Agregar
+        </button>
+      </div>
+      {items.length === 0 ? (
+        <p className="text-xs text-muted-foreground italic px-1">Sin {title.toLowerCase()}</p>
+      ) : (
+        <div className="space-y-2">
+          {items.map((row) => (
+            <div key={row.id} className="grid grid-cols-[1fr_80px_32px] gap-2 items-center">
+              <input
+                type="text"
+                value={row.name}
+                onChange={(e) => onUpdate(cat, row.id, "name", e.target.value)}
+                placeholder="Nombre"
+                className="w-full rounded-xl border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+              />
+              <input
+                type="text"
+                value={row.price}
+                onChange={(e) => onUpdate(cat, row.id, "price", e.target.value)}
+                placeholder="Precio"
+                className="w-full rounded-xl border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+              />
+              <button
+                onClick={() => {
+                  if (items.length > 1) onRemove(cat, row.id);
+                  else { onUpdate(cat, row.id, "name", ""); onUpdate(cat, row.id, "price", ""); }
+                }}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
+                title="Eliminar"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function GeneratePage() {
   const { logo, referenceImage } = useSettingsStore();
   const [topTab, setTopTab] = useState<"crear" | "editar">("crear");
@@ -342,56 +404,6 @@ export default function GeneratePage() {
     setResult(null); setStorageUrl(null); setError("");
     toast("Imagen descartada");
   };
-
-  const CategorySection = ({ title, cat, items }: { title: string; cat: Category; items: MenuItem[] }) => (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between px-1">
-        <span className="text-xs font-semibold text-foreground/60 flex items-center gap-1.5">
-          <UtensilsCrossed size={11} /> {title}
-        </span>
-        <button
-          onClick={() => addItem(cat)}
-          className="text-xs text-primary hover:text-primary/70 font-medium flex items-center gap-1"
-        >
-          <Plus size={11} /> Agregar
-        </button>
-      </div>
-      {items.length === 0 ? (
-        <p className="text-xs text-muted-foreground italic px-1">Sin {title.toLowerCase()}</p>
-      ) : (
-        <div className="space-y-2">
-          {items.map((row) => (
-            <div key={row.id} className="grid grid-cols-[1fr_80px_32px] gap-2 items-center">
-              <input
-                type="text"
-                value={row.name}
-                onChange={(e) => updateItem(cat, row.id, "name", e.target.value)}
-                placeholder="Nombre"
-                className="w-full rounded-xl border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
-              />
-              <input
-                type="text"
-                value={row.price}
-                onChange={(e) => updateItem(cat, row.id, "price", e.target.value)}
-                placeholder="Precio"
-                className="w-full rounded-xl border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
-              />
-              <button
-                onClick={() => {
-                  if (items.length > 1) removeItem(cat, row.id);
-                  else { updateItem(cat, row.id, "name", ""); updateItem(cat, row.id, "price", ""); }
-                }}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
-                title="Eliminar"
-              >
-                <Trash2 size={13} />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 
   const card = "rounded-2xl border border-border bg-card p-4 md:p-5";
   const fieldLabel = "text-xs font-semibold text-foreground/70 mb-2 block";
@@ -694,11 +706,11 @@ export default function GeneratePage() {
                   />
                 </div>
 
-                <CategorySection title="Entradas" cat="entradas" items={personalizado.entradas} />
-                <CategorySection title="Segundos" cat="segundos" items={personalizado.segundos} />
-                <CategorySection title="Guarniciones" cat="guarniciones" items={personalizado.guarniciones} />
-                <CategorySection title="Bebidas" cat="bebidas" items={personalizado.bebidas} />
-                <CategorySection title="Postres" cat="postres" items={personalizado.postres} />
+                <CategorySection title="Entradas" cat="entradas" items={personalizado.entradas} onAdd={addItem} onRemove={removeItem} onUpdate={updateItem} />
+                <CategorySection title="Segundos" cat="segundos" items={personalizado.segundos} onAdd={addItem} onRemove={removeItem} onUpdate={updateItem} />
+                <CategorySection title="Guarniciones" cat="guarniciones" items={personalizado.guarniciones} onAdd={addItem} onRemove={removeItem} onUpdate={updateItem} />
+                <CategorySection title="Bebidas" cat="bebidas" items={personalizado.bebidas} onAdd={addItem} onRemove={removeItem} onUpdate={updateItem} />
+                <CategorySection title="Postres" cat="postres" items={personalizado.postres} onAdd={addItem} onRemove={removeItem} onUpdate={updateItem} />
 
                 <div>
                   <label className={fieldLabel}>Precio del Menú</label>
