@@ -55,6 +55,33 @@ def _n8n_img_url() -> str:
     return settings.N8N_IMG_GENERATION_URL or f"{settings.N8N_WEBHOOK_URL}{settings.N8N_IMAGE_GEN_WEBHOOK}"
 
 
+def _build_personalizado_prompt(payload: dict) -> str:
+    titulo = payload.get("titulo", "")
+    precio_menu = payload.get("precio_menu", "")
+    lines = [f"Menú: {titulo}" if not precio_menu else f"Menú: {titulo} a {precio_menu}"]
+
+    def _items(name: str, items: list[dict]) -> str | None:
+        filled = []
+        for item in items or []:
+            n = (item.get("name") or "").strip()
+            if not n:
+                continue
+            p = (item.get("price") or "").strip()
+            filled.append(f"{n} a {p} Bs" if p else n)
+        if filled:
+            return f"{name}: {', '.join(filled)}."
+        return None
+
+    for cat in [("Entradas", "entradas"), ("Segundos", "segundos"), ("Guarniciones", "guarniciones"), ("Bebidas", "bebidas"), ("Postres", "postres")]:
+        label, key = cat
+        line = _items(label, payload.get(key, []))
+        if line:
+            lines.append(line)
+
+    prompt = "\n".join(lines)
+    return prompt if prompt else payload.get("prompt", titulo)
+
+
 async def _call_openai(system: str, user_text: str) -> str:
     api_key = settings.OPENAI_API_KEY
     if not api_key:
@@ -190,10 +217,18 @@ async def generate_via_n8n(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    body: dict = {
-        "prompt": payload.get("prompt", ""),
-        "model": payload.get("model", "gemini"),
-    }
+    if "titulo" in payload and isinstance(payload["titulo"], str):
+        prompt_text = _build_personalizado_prompt(payload)
+        body: dict = {
+            "prompt": prompt_text,
+            "model": payload.get("model", "gemini"),
+            "personalizado_data": {k: v for k, v in payload.items() if k not in ("model", "style", "size", "negative_prompt")},
+        }
+    else:
+        body = {
+            "prompt": payload.get("prompt", ""),
+            "model": payload.get("model", "gemini"),
+        }
     if payload.get("style"):
         body["style"] = payload["style"]
     if payload.get("size"):

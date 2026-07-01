@@ -46,6 +46,30 @@ const models = [
 
 const styles = ["Cinematográfico", "Minimalista", "Nocturno", "Cálido", "Gourmet", "Editorial", "Vintage", "Neón"];
 
+interface MenuItem { id: number; name: string; price: string; }
+
+interface PersonalizadoData {
+  titulo: string;
+  entradas: MenuItem[];
+  segundos: MenuItem[];
+  guarniciones: MenuItem[];
+  bebidas: MenuItem[];
+  postres: MenuItem[];
+  precio_menu: string;
+}
+
+const EMPTY_PERSONALIZADO: PersonalizadoData = {
+  titulo: "",
+  entradas: [{ id: 1, name: "", price: "" }],
+  segundos: [{ id: 1, name: "", price: "" }],
+  guarniciones: [{ id: 1, name: "", price: "" }],
+  bebidas: [{ id: 1, name: "", price: "" }],
+  postres: [{ id: 1, name: "", price: "" }],
+  precio_menu: "",
+};
+
+type Category = "entradas" | "segundos" | "guarniciones" | "bebidas" | "postres";
+
 export default function GeneratePage() {
   const { logo, referenceImage } = useSettingsStore();
   const [topTab, setTopTab] = useState<"crear" | "editar">("crear");
@@ -69,7 +93,7 @@ export default function GeneratePage() {
   const [size, setSize] = useState(models[0].sizes[1]);
   const [selStyles, setSelStyles] = useState<string[]>([]);
   const [mode, setMode] = useState<"libre" | "personalizado">("libre");
-  const [dishes, setDishes] = useState([{ id: 1, name: "", price: "" }]);
+  const [personalizado, setPersonalizado] = useState<PersonalizadoData>(EMPTY_PERSONALIZADO);
   const [generating, setGenerating] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -230,30 +254,45 @@ export default function GeneratePage() {
 
   const handleEnhance = () => enhanceInto(prompt, setPrompt);
 
-  const addDish = () => setDishes((d) => [...d, { id: Date.now(), name: "", price: "" }]);
-  const removeDish = (id: number) => setDishes((d) => d.filter((x) => x.id !== id));
-  const updateDish = (id: number, field: "name" | "price", value: string) =>
-    setDishes((d) => d.map((x) => (x.id === id ? { ...x, [field]: value } : x)));
+  const addItem = (cat: Category) =>
+    setPersonalizado((p) => ({ ...p, [cat]: [...p[cat], { id: Date.now(), name: "", price: "" }] }));
 
-  const getEffectivePrompt = () => {
+  const removeItem = (cat: Category, id: number) =>
+    setPersonalizado((p) => ({ ...p, [cat]: p[cat].filter((x) => x.id !== id) }));
+
+  const updateItem = (cat: Category, id: number, field: "name" | "price", value: string) =>
+    setPersonalizado((p) => ({ ...p, [cat]: p[cat].map((x) => (x.id === id ? { ...x, [field]: value } : x)) }));
+
+  const getEffectivePrompt = (): string | PersonalizadoData | null => {
     if (mode === "personalizado") {
-      const filled = dishes.filter((d) => d.name.trim());
-      if (!filled.length) return "";
-      return filled.map((d) => `${d.name.trim()}${d.price.trim() ? ` a ${d.price.trim()} Bs` : ""}`).join(", ");
+      const hasTitle = personalizado.titulo.trim();
+      const hasItems = [...personalizado.entradas, ...personalizado.segundos, ...personalizado.guarniciones, ...personalizado.bebidas, ...personalizado.postres].some((d) => d.name.trim());
+      if (!hasTitle || !hasItems) return null;
+      return {
+        titulo: personalizado.titulo.trim(),
+        entradas: personalizado.entradas.filter((d) => d.name.trim()),
+        segundos: personalizado.segundos.filter((d) => d.name.trim()),
+        guarniciones: personalizado.guarniciones.filter((d) => d.name.trim()),
+        bebidas: personalizado.bebidas.filter((d) => d.name.trim()),
+        postres: personalizado.postres.filter((d) => d.name.trim()),
+        precio_menu: personalizado.precio_menu.trim(),
+      };
     }
-    return prompt.trim();
+    return prompt.trim() || null;
   };
 
   const handleGenerate = async () => {
     const effectivePrompt = getEffectivePrompt();
     if (!effectivePrompt) {
-      return toast.error(mode === "personalizado" ? "Agrega al menos un plato" : "Escribe un prompt");
+      return toast.error(mode === "personalizado" ? "Completa el título y al menos un plato" : "Escribe un prompt");
     }
     const token = useAuthStore.getState().token || localStorage.getItem("token");
     if (!token) { toast.error("Sesión expirada"); return; }
     setGenerating(true); setResult(null); setError("");
     startProgress();
-    const body: Record<string, string> = { prompt: effectivePrompt, model: model.id };
+    const body: Record<string, unknown> = mode === "personalizado"
+      ? { ...(effectivePrompt as PersonalizadoData), model: model.id }
+      : { prompt: effectivePrompt as string, model: model.id };
     if (selStyles.length) body.style = selStyles.join(", ");
     if (model.showSize && size) body.size = size.split(" ")[0];
     try {
@@ -284,14 +323,16 @@ export default function GeneratePage() {
     if (!token || (!storageUrl && !result)) return;
     setSaving(true);
     try {
+      const rawPrompt = getEffectivePrompt();
+      const promptStr = mode === "personalizado" && rawPrompt ? JSON.stringify(rawPrompt) : ((rawPrompt as string) || "");
       await api.publish.saveToGallery({
         image_url: storageUrl,
         data_uri: !storageUrl ? result : null,
-        prompt: getEffectivePrompt(),
+        prompt: promptStr,
         model: model.id,
       }, token);
       toast.success("Imagen guardada en galería");
-      setResult(null); setStorageUrl(null); setPrompt(""); setDishes([{ id: 1, name: "", price: "" }]); setSelStyles([]);
+      setResult(null); setStorageUrl(null); setPrompt(""); setPersonalizado(EMPTY_PERSONALIZADO); setSelStyles([]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Error al guardar");
     } finally { setSaving(false); }
@@ -301,6 +342,56 @@ export default function GeneratePage() {
     setResult(null); setStorageUrl(null); setError("");
     toast("Imagen descartada");
   };
+
+  const CategorySection = ({ title, cat, items }: { title: string; cat: Category; items: MenuItem[] }) => (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between px-1">
+        <span className="text-xs font-semibold text-foreground/60 flex items-center gap-1.5">
+          <UtensilsCrossed size={11} /> {title}
+        </span>
+        <button
+          onClick={() => addItem(cat)}
+          className="text-xs text-primary hover:text-primary/70 font-medium flex items-center gap-1"
+        >
+          <Plus size={11} /> Agregar
+        </button>
+      </div>
+      {items.length === 0 ? (
+        <p className="text-xs text-muted-foreground italic px-1">Sin {title.toLowerCase()}</p>
+      ) : (
+        <div className="space-y-2">
+          {items.map((row) => (
+            <div key={row.id} className="grid grid-cols-[1fr_80px_32px] gap-2 items-center">
+              <input
+                type="text"
+                value={row.name}
+                onChange={(e) => updateItem(cat, row.id, "name", e.target.value)}
+                placeholder="Nombre"
+                className="w-full rounded-xl border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+              />
+              <input
+                type="text"
+                value={row.price}
+                onChange={(e) => updateItem(cat, row.id, "price", e.target.value)}
+                placeholder="Precio"
+                className="w-full rounded-xl border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+              />
+              <button
+                onClick={() => {
+                  if (items.length > 1) removeItem(cat, row.id);
+                  else { updateItem(cat, row.id, "name", ""); updateItem(cat, row.id, "price", ""); }
+                }}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
+                title="Eliminar"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   const card = "rounded-2xl border border-border bg-card p-4 md:p-5";
   const fieldLabel = "text-xs font-semibold text-foreground/70 mb-2 block";
@@ -592,57 +683,39 @@ export default function GeneratePage() {
               </>
             ) : (
               <div className="space-y-3">
-                {/* Column headers */}
-                <div className="grid grid-cols-[1fr_120px_32px] gap-2 px-1">
-                  <span className="text-xs font-semibold text-foreground/60 flex items-center gap-1.5">
-                    <UtensilsCrossed size={11} /> Plato / Producto
-                  </span>
-                  <span className="text-xs font-semibold text-foreground/60">Precio (Bs)</span>
-                  <span />
+                <div>
+                  <label className={fieldLabel}>Título del Menú</label>
+                  <input
+                    type="text"
+                    value={personalizado.titulo}
+                    onChange={(e) => setPersonalizado((p) => ({ ...p, titulo: e.target.value }))}
+                    placeholder='Ej: Almuerzo Ejecutivo'
+                    className="w-full rounded-xl border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+                  />
                 </div>
 
-                {/* Rows */}
-                <div className="space-y-2">
-                  {dishes.map((row, idx) => (
-                    <div key={row.id} className="grid grid-cols-[1fr_120px_32px] gap-2 items-center">
-                      <input
-                        type="text"
-                        value={row.name}
-                        onChange={(e) => updateDish(row.id, "name", e.target.value)}
-                        placeholder={idx === 0 ? "Ej: Churrasco a la parrilla" : "Nombre del plato"}
-                        className="w-full rounded-xl border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
-                      />
-                      <input
-                        type="text"
-                        value={row.price}
-                        onChange={(e) => updateDish(row.id, "price", e.target.value)}
-                        placeholder="Ej: 85"
-                        className="w-full rounded-xl border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
-                      />
-                      <button
-                        onClick={() => { if (dishes.length > 1) removeDish(row.id); else { updateDish(row.id, "name", ""); updateDish(row.id, "price", ""); } }}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
-                        title="Eliminar fila"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  ))}
+                <CategorySection title="Entradas" cat="entradas" items={personalizado.entradas} />
+                <CategorySection title="Segundos" cat="segundos" items={personalizado.segundos} />
+                <CategorySection title="Guarniciones" cat="guarniciones" items={personalizado.guarniciones} />
+                <CategorySection title="Bebidas" cat="bebidas" items={personalizado.bebidas} />
+                <CategorySection title="Postres" cat="postres" items={personalizado.postres} />
+
+                <div>
+                  <label className={fieldLabel}>Precio del Menú</label>
+                  <input
+                    type="text"
+                    value={personalizado.precio_menu}
+                    onChange={(e) => setPersonalizado((p) => ({ ...p, precio_menu: e.target.value }))}
+                    placeholder='Ej: 35 Bs'
+                    className="w-full rounded-xl border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+                  />
                 </div>
 
-                {/* Add row */}
-                <button
-                  onClick={addDish}
-                  className="w-full h-8 rounded-xl border border-dashed border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <Plus size={12} /> Agregar plato
-                </button>
-
-                {/* Prompt preview */}
-                {getEffectivePrompt() && (
-                  <p className="text-xs text-muted-foreground bg-muted rounded-lg px-3 py-2 leading-relaxed">
-                    <span className="text-foreground/50">Prompt: </span>{getEffectivePrompt()}
-                  </p>
+                {mode === "personalizado" && getEffectivePrompt() && (
+                  <div className="text-xs text-muted-foreground bg-muted rounded-lg px-3 py-2 leading-relaxed max-h-32 overflow-y-auto">
+                    <span className="text-foreground/50 font-mono block mb-1">JSON enviado:</span>
+                    <pre className="font-mono whitespace-pre-wrap break-all">{JSON.stringify(getEffectivePrompt(), null, 2)}</pre>
+                  </div>
                 )}
               </div>
             )}
@@ -711,7 +784,7 @@ export default function GeneratePage() {
 
           <div className="flex gap-3">
             <button
-              onClick={() => { setPrompt(""); setSelStyles([]); setResult(null); }}
+              onClick={() => { setPrompt(""); setSelStyles([]); setResult(null); setPersonalizado(EMPTY_PERSONALIZADO); }}
               className="h-10 px-4 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex items-center gap-2"
             >
               <RefreshCw size={14} /> Reiniciar
