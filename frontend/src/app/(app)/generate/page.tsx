@@ -68,6 +68,16 @@ const EMPTY_PERSONALIZADO: PersonalizadoData = {
   precio_menu: "",
 };
 
+interface PersonalizadoPayload {
+  titulo: string;
+  entradas: string[];
+  segundos: string[];
+  guarniciones: string[];
+  bebidas: string[];
+  postres: string[];
+  precio_menu: string;
+}
+
 type Category = "entradas" | "segundos" | "guarniciones" | "bebidas" | "postres";
 
 function CategorySection({
@@ -325,20 +335,30 @@ export default function GeneratePage() {
   const updateItem = (cat: Category, id: number, field: "name" | "price", value: string) =>
     setPersonalizado((p) => ({ ...p, [cat]: p[cat].map((x) => (x.id === id ? { ...x, [field]: value } : x)) }));
 
-  const getEffectivePrompt = (): string | PersonalizadoData | null => {
+  const toCleanPayload = (p: PersonalizadoData): PersonalizadoPayload => {
+    const fmt = (items: MenuItem[]) =>
+      items.filter((d) => d.name.trim()).map((d) => {
+        const name = d.name.trim();
+        const price = d.price.trim();
+        return price ? `${name} a ${price} Bs` : name;
+      });
+    return {
+      titulo: p.titulo.trim(),
+      entradas: fmt(p.entradas),
+      segundos: fmt(p.segundos),
+      guarniciones: fmt(p.guarniciones),
+      bebidas: fmt(p.bebidas),
+      postres: fmt(p.postres),
+      precio_menu: p.precio_menu.trim(),
+    };
+  };
+
+  const getEffectivePrompt = (): string | PersonalizadoPayload | null => {
     if (mode === "personalizado") {
       const hasTitle = personalizado.titulo.trim();
       const hasItems = [...personalizado.entradas, ...personalizado.segundos, ...personalizado.guarniciones, ...personalizado.bebidas, ...personalizado.postres].some((d) => d.name.trim());
       if (!hasTitle || !hasItems) return null;
-      return {
-        titulo: personalizado.titulo.trim(),
-        entradas: personalizado.entradas.filter((d) => d.name.trim()),
-        segundos: personalizado.segundos.filter((d) => d.name.trim()),
-        guarniciones: personalizado.guarniciones.filter((d) => d.name.trim()),
-        bebidas: personalizado.bebidas.filter((d) => d.name.trim()),
-        postres: personalizado.postres.filter((d) => d.name.trim()),
-        precio_menu: personalizado.precio_menu.trim(),
-      };
+      return toCleanPayload(personalizado);
     }
     return prompt.trim() || null;
   };
@@ -353,7 +373,7 @@ export default function GeneratePage() {
     setGenerating(true); setResult(null); setError("");
     startProgress();
     const body: Record<string, unknown> = mode === "personalizado"
-      ? { ...(effectivePrompt as PersonalizadoData), model: model.id }
+      ? { ...(effectivePrompt as PersonalizadoPayload), model: model.id }
       : { prompt: effectivePrompt as string, model: model.id };
     if (selStyles.length) body.style = selStyles.join(", ");
     if (model.showSize && size) body.size = size.split(" ")[0];

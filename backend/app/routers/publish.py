@@ -60,14 +60,18 @@ def _build_personalizado_prompt(payload: dict) -> str:
     precio_menu = payload.get("precio_menu", "")
     lines = [f"Menú: {titulo}" if not precio_menu else f"Menú: {titulo} a {precio_menu}"]
 
-    def _items(name: str, items: list[dict]) -> str | None:
+    def _items(name: str, items: list) -> str | None:
         filled = []
         for item in items or []:
-            n = (item.get("name") or "").strip()
-            if not n:
-                continue
-            p = (item.get("price") or "").strip()
-            filled.append(f"{n} a {p} Bs" if p else n)
+            if isinstance(item, dict):
+                n = (item.get("name") or "").strip()
+                p = (item.get("price") or "").strip()
+                if n:
+                    filled.append(f"{n} a {p} Bs" if p else n)
+            elif isinstance(item, str):
+                s = item.strip()
+                if s:
+                    filled.append(s)
         if filled:
             return f"{name}: {', '.join(filled)}."
         return None
