@@ -35,13 +35,6 @@ const models = [
     sizes: ["1024x1024", "1024x1536 (Portrait)", "1536x1024 (Landscape)", "Auto"],
     showSize: true,
   },
-  {
-    id: "gemini",
-    name: "Gemini",
-    provider: "Google Imagen 3",
-    sizes: [] as string[],
-    showSize: false,
-  },
 ];
 
 const styles = ["Cinematográfico", "Minimalista", "Nocturno", "Cálido", "Gourmet", "Editorial", "Vintage", "Neón"];
@@ -150,6 +143,7 @@ export default function GeneratePage() {
   const [editFile, setEditFile] = useState<File | null>(null);
   const [editPreviewUrl, setEditPreviewUrl] = useState<string | null>(null);
   const [editPrompt, setEditPrompt] = useState("");
+  const [editSize, setEditSize] = useState("1024x1536 (Portrait)"); // posters son verticales
   const [editGenerating, setEditGenerating] = useState(false);
   const [editResult, setEditResult] = useState<string | null>(null);
   const [editStorageUrl, setEditStorageUrl] = useState<string | null>(null);
@@ -265,7 +259,8 @@ export default function GeneratePage() {
     setEditError("");
     startEditProgress();
     try {
-      const data = await api.publish.editImage(editFile, editPrompt.trim(), "1024x1024", token);
+      const sz = editSize.split(" ")[0];
+      const data = await api.publish.editImage(editFile, editPrompt.trim(), sz === "Auto" ? "auto" : sz, token);
       const displayUrl = data.data_uri || toAbsoluteUrl(data.image_url || "");
       if (displayUrl) {
         finishEditProgress();
@@ -529,6 +524,25 @@ export default function GeneratePage() {
                     ? <><Loader2 size={13} className="animate-spin" /> Mejorando prompt...</>
                     : <><Zap size={13} /> Mejorar prompt con IA</>}
                 </button>
+              </div>
+              <div>
+                <label className={fieldLabel}>Tamaño de salida</label>
+                <Select value={editSize} onValueChange={setEditSize}>
+                  <SelectTrigger className="bg-muted border-border rounded-xl h-11">
+                    <div className="flex items-center gap-2">
+                      <SlidersHorizontal size={13} className="flex-shrink-0 text-muted-foreground" />
+                      <span className="text-sm">{editSize}</span>
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {models[0].sizes.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  Usá <span className="font-medium">Portrait</span> para posters verticales — evita que se recorte.
+                </p>
               </div>
               <div className="flex items-center gap-2 rounded-xl bg-muted/50 border border-border px-3 py-2.5">
                 <Sparkles size={13} className="text-secondary flex-shrink-0" />
