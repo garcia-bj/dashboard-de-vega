@@ -25,6 +25,11 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
   });
 
   if (!res.ok) {
+    if (res.status === 401) {
+      const { useAuthStore } = await import("@/store/auth");
+      useAuthStore.getState().logout();
+      if (typeof window !== "undefined") window.location.href = "/login";
+    }
     const error = await res.json().catch(() => ({ detail: "Error desconocido" }));
     throw new Error(error.detail || "Error en la petición");
   }
