@@ -104,7 +104,7 @@ export default function DashboardPage() {
           style={{ background: "radial-gradient(ellipse at top left, hsl(342 62% 44% / 0.08), transparent 60%)" }} />
         <div className="relative z-10">
           <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-foreground tracking-tight mb-1">
-            Bienvenido a <span style={{ color: "hsl(var(--secondary))" }}>De Vega</span>
+            Bienvenido a <span style={{ color: "hsl(var(--secondary))" }}>Cookio</span>
           </h1>
           <p className="text-muted-foreground text-sm max-w-lg">
             Genera imágenes y videos con IA y publica automáticamente en tus redes sociales.

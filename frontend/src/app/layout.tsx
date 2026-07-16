@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "De Vega | Generador de Imágenes IA",
+  title: "Cookio | Generador de Imágenes IA",
   description: "Genera imágenes con IA y autopublícalas en Meta",
   icons: {
     icon: "/logo.png",

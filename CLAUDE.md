@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-De Vega is an AI image generation and auto-publishing platform for Meta (Facebook, Instagram, Stories). Users create publications with prompts, trigger AI image generation via n8n webhooks, and publish to Meta social networks.
+Cookio is an AI image generation and auto-publishing platform for Meta (Facebook, Instagram, Stories). Users create publications with prompts, trigger AI image generation via n8n webhooks, and publish to Meta social networks.
 
 ## Development Commands
 

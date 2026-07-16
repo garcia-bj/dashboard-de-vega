@@ -79,9 +79,9 @@ export default function LoginPage() {
         >
           <div className="w-9 h-9 rounded-xl flex items-center justify-center"
             style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(342 62% 36%))" }}>
-            <img src="/logo.png" alt="De Vega" className="w-5 h-5 object-contain" />
+            <img src="/logo.png" alt="Cookio" className="w-5 h-5 object-contain" />
           </div>
-          <span className="text-xl font-bold text-white tracking-tight">De Vega</span>
+          <span className="text-xl font-bold text-white tracking-tight">Cookio</span>
         </motion.div>
 
         {/* Headline */}
@@ -137,7 +137,7 @@ export default function LoginPage() {
           transition={{ duration: 0.5, delay: 0.7 }}
           className="relative z-10 text-[11px] text-sidebar-muted"
         >
-          &copy; {new Date().getFullYear()} De Vega — AI Media Studio
+          &copy; {new Date().getFullYear()} Cookio — AI Media Studio
         </motion.p>
       </div>
 
@@ -165,9 +165,9 @@ export default function LoginPage() {
           >
             <div className="w-8 h-8 rounded-xl flex items-center justify-center"
               style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(342 62% 36%))" }}>
-              <img src="/logo.png" alt="De Vega" className="w-5 h-5 object-contain" />
+              <img src="/logo.png" alt="Cookio" className="w-5 h-5 object-contain" />
             </div>
-            <span className="text-lg font-bold text-foreground tracking-tight">De Vega</span>
+            <span className="text-lg font-bold text-foreground tracking-tight">Cookio</span>
           </motion.div>
 
           {/* Header */}
@@ -280,7 +280,7 @@ export default function LoginPage() {
           {/* Divider */}
           <div className="flex items-center gap-3 my-6">
             <div className="flex-1 h-px bg-border" />
-            <span className="text-[11px] text-muted-foreground font-medium">DE VEGA</span>
+            <span className="text-[11px] text-muted-foreground font-medium">COOKIO</span>
             <div className="flex-1 h-px bg-border" />
           </div>
 

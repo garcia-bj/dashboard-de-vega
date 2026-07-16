@@ -3,7 +3,7 @@ from functools import lru_cache
 
 
 class Settings(BaseSettings):
-    APP_NAME: str = "De_Vega"
+    APP_NAME: str = "Cookio"
     DEBUG: bool = False
     SECRET_KEY: str
     DATABASE_URL: str

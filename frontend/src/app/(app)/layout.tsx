@@ -65,7 +65,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleLogout = () => { logout(); setUserMenuOpen(false); router.replace("/login"); };
-  const currentPage = navItems.find((i) => pathname?.startsWith(i.href))?.label || "De Vega";
+  const currentPage = navItems.find((i) => pathname?.startsWith(i.href))?.label || "Cookio";
 
   const NavLink = ({ item, mobile = false }: { item: typeof navItems[0]; mobile?: boolean }) => {
     const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
@@ -101,13 +101,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       )}>
         {collapsed && !mobile ? (
           <button onClick={() => setCollapsed(false)} className="p-2 rounded-lg hover:bg-white/10 transition-colors" title="Expandir">
-            <img src="/logo.png" alt="De Vega" className="w-5 h-5 object-contain" />
+            <img src="/logo.png" alt="Cookio" className="w-5 h-5 object-contain" />
           </button>
         ) : (
           <div className="flex items-center justify-between w-full">
             <Link href="/dashboard" className="flex items-center gap-2.5" onClick={() => setMobileOpen(false)}>
-              <img src="/logo.png" alt="De Vega" className="w-7 h-7 object-contain" />
-              <span className="text-[15px] font-bold text-white tracking-tight">De Vega</span>
+              <img src="/logo.png" alt="Cookio" className="w-7 h-7 object-contain" />
+              <span className="text-[15px] font-bold text-white tracking-tight">Cookio</span>
             </Link>
             {!mobile && (
               <button onClick={() => setCollapsed(true)} className="p-1.5 rounded-lg hover:bg-white/10 text-sidebar-muted hover:text-white transition-colors" title="Colapsar">

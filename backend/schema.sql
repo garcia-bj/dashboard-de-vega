@@ -1,5 +1,5 @@
 -- ============================================================
--- De Vega - Schema de Base de Datos
+-- Cookio - Schema de Base de Datos
 -- PostgreSQL 16
 -- ============================================================
 
@@ -149,7 +149,7 @@ CREATE TRIGGER trg_publications_updated_at
 -- La password 'admin123' hasheada con bcrypt:
 INSERT INTO users (email, hashed_password, full_name, role)
 VALUES (
-    'admin@devega.com',
+    'admin@cookio.com',
     '$2b$12$LJ3m4ys3GZfnYMz8kVsKaOTSfVFKrFJvPJ0MqgwpRNTeSxLW0EFui',
     'Brandon Admin',
     'admin'
