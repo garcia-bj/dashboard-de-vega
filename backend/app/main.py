@@ -2,9 +2,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.config import get_settings
-from app.db.database import init_db, async_session
+from app.db.database import async_session
 from app.routers import auth, publications, social, media, settings as settings_router, publish, video
 
 settings = get_settings()
@@ -38,12 +39,18 @@ async def _seed_admin() -> None:
             full_name="Admin",
             is_active=True,
         ))
-        await db.commit()
+        try:
+            await db.commit()
+        except IntegrityError:
+            # Otro worker (uvicorn --workers N) ganó la carrera y ya lo creó.
+            await db.rollback()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()
+    # El esquema lo gobierna Alembic (start.sh → alembic upgrade head).
+    # init_db()/create_all() no debe correr aquí: con varios workers crea enums
+    # y tablas a la vez, choca con las migraciones y rompe el arranque.
     await _seed_admin()
     yield
 
