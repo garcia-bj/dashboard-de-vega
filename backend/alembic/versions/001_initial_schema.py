@@ -16,6 +16,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # uuid_generate_v4() lives in uuid-ossp; a fresh Postgres doesn't ship it enabled.
+    op.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
     op.create_table(
         "users",
         sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("uuid_generate_v4()")),
