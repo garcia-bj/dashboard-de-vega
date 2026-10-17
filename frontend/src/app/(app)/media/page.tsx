@@ -296,7 +296,7 @@ export default function MediaPage() {
                 <div className="flex items-center gap-3">
                   <div className="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-muted border border-border flex items-center justify-center flex-shrink-0 overflow-hidden">
                     {item.image_url
-                      ? <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
+                      ? <img src={toAbsoluteUrl(item.image_url)} alt={item.title} loading="lazy" className="w-full h-full object-cover" />
                       : <Sparkles size={20} className="text-muted-foreground/30" />}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -314,11 +314,11 @@ export default function MediaPage() {
                   <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0">
                     {item.image_url && (
                       <>
-                        <button onClick={() => window.open(item.image_url!, "_blank")}
+                        <button onClick={() => window.open(toAbsoluteUrl(item.image_url!), "_blank")}
                           className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="Ver">
                           <Eye size={14} />
                         </button>
-                        <button onClick={() => handleDownload(item.image_url!, item.title)}
+                        <button onClick={() => handleDownload(toAbsoluteUrl(item.image_url!), item.title)}
                           className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="Descargar">
                           <Download size={14} />
                         </button>
@@ -342,14 +342,14 @@ export default function MediaPage() {
               <div key={item.id} className="rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/20 transition-all cursor-pointer group">
                 <div className="aspect-square bg-muted flex items-center justify-center relative overflow-hidden">
                   {item.image_url
-                    ? <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300" />
+                    ? <img src={toAbsoluteUrl(item.image_url)} alt={item.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300" />
                     : <Sparkles size={28} className="text-muted-foreground/20" />}
                   <Badge variant={s.variant} className="absolute top-2.5 left-2.5 gap-1 shadow-lg">
                     <s.icon size={9} />{s.label}
                   </Badge>
                   <div className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                     {item.image_url && (
-                      <button onClick={() => handleDownload(item.image_url!, item.title)}
+                      <button onClick={() => handleDownload(toAbsoluteUrl(item.image_url!), item.title)}
                         className="w-7 h-7 rounded-lg bg-background/80 backdrop-blur-sm border border-border flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="Descargar">
                         <Download size={12} />
                       </button>

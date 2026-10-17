@@ -12,6 +12,13 @@ import {
   ArrowUpRight, TrendingUp, ExternalLink, CalendarDays, Percent, Video, Pencil,
 } from "lucide-react";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+function toAbsoluteUrl(url: string): string {
+  if (!url) return url;
+  if (url.startsWith("http")) return url;
+  return `${API_BASE}${url.startsWith("/") ? "" : "/"}${url}`;
+}
+
 const statusMap: Record<string, { label: string; variant: "success" | "warning" | "ghost" | "default" | "destructive"; icon: typeof CheckCircle2 }> = {
   scheduled:  { label: "Programada",  variant: "default",     icon: Clock },
   pending:    { label: "Pendiente",   variant: "default",     icon: Clock },
@@ -192,7 +199,7 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/60 hover:bg-muted transition-colors cursor-pointer">
                       <div className="w-10 h-10 rounded-xl bg-card border border-border flex items-center justify-center flex-shrink-0 overflow-hidden">
                         {pub.image_url
-                          ? <img src={pub.image_url} alt="" className="w-full h-full object-cover rounded-xl" />
+                          ? <img src={toAbsoluteUrl(pub.image_url)} alt="" loading="lazy" className="w-full h-full object-cover rounded-xl" />
                           : <ImageIcon size={16} className="text-muted-foreground" />}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -309,7 +316,7 @@ export default function DashboardPage() {
                 <div key={pub.id} className="rounded-xl bg-muted/60 border border-border overflow-hidden group">
                   <div className="aspect-video bg-muted overflow-hidden">
                     {pub.image_url
-                      ? <img src={pub.image_url} alt={pub.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      ? <img src={toAbsoluteUrl(pub.image_url)} alt={pub.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                       : <div className="w-full h-full flex items-center justify-center"><ImageIcon size={20} className="text-muted-foreground opacity-30" /></div>}
                   </div>
                   <div className="p-2.5">
